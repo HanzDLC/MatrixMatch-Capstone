@@ -25,19 +25,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Staging
-        uses: render-deploy/render-deploy-action@v1.0.0
+      - name: Deploy to Vercel Staging
+        uses: amondnet/vercel-action@v20
         with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID_STAGING }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          scope: ${{ secrets.VERCEL_ORG_ID }}
 
   deploy:
     needs: staging
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Production
-        uses: render-deploy/render-deploy-action@v1.0.0
+      - name: Deploy to Vercel Production
+        uses: amondnet/vercel-action@v20
         with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          scope: ${{ secrets.VERCEL_ORG_ID }}
