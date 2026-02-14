@@ -8,7 +8,12 @@ def get_admin_stats():
             SELECT
                 COALESCE(SUM(CASE WHEN role = 'Researcher' THEN 1 ELSE 0 END), 0) AS total_researchers,
                 COALESCE(SUM(CASE WHEN role = 'Admin' THEN 1 ELSE 0 END), 0) AS total_admins,
-                (SELECT COUNT(*) FROM comparison_history) AS total_comparisons
+                (SELECT COUNT(*) FROM comparison_history) AS total_comparisons,
+                (
+                    SELECT COUNT(*)
+                    FROM comparison_history
+                    WHERE created_at >= NOW() - INTERVAL '7 days'
+                ) AS last_7_days_runs
             FROM "user"
             """
         )
