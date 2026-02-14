@@ -2,7 +2,7 @@
 torch
 flask
 gunicorn
-mysql-connector-python
+psycopg2-binary
 pandas
 matplotlib
 sentence-transformers

@@ -1,0 +1,3 @@
+FROM dimitri/pgloader:latest
+
+ENTRYPOINT ["sh", "-c", "MYSQL_URL=\"mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT:-3306}/${MYSQL_DB}\"; PG_URL=\"postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT:-5432}/${PG_DB}\"; echo \"Starting migration from ${MYSQL_HOST}/${MYSQL_DB} to ${PG_HOST}/${PG_DB}...\"; exec pgloader \"$MYSQL_URL\" \"$PG_URL\""]

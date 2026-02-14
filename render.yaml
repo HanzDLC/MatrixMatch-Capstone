@@ -1,3 +1,10 @@
+databases:
+  - name: matrixmatch-db
+    plan: free
+    postgresMajorVersion: "16"
+    databaseName: matrixmatch
+    user: matrixmatch
+
 services:
   - type: web
     name: matrixmatch
@@ -10,10 +17,24 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DB_HOST
-        sync: false
+        fromDatabase:
+          name: matrixmatch-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: matrixmatch-db
+          property: port
       - key: DB_USER
-        sync: false
+        fromDatabase:
+          name: matrixmatch-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: matrixmatch-db
+          property: password
       - key: DB_NAME
-        sync: false
+        fromDatabase:
+          name: matrixmatch-db
+          property: database
+      - key: DB_OPTIONS
+        value: -c search_path=matrixmatch,public

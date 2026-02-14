@@ -8,7 +8,8 @@ from flask import (
     flash,
     send_file
 )
-import mysql.connector
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import base64
 import io
 import matcher
@@ -24,15 +25,17 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey_change_me")  # TODO: ch
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
-    "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", ""),          # as you specified
-    "database": os.getenv("DB_NAME", "matrixmatch")
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "dbname": os.getenv("DB_NAME", "matrixmatch"),
+    "options": os.getenv("DB_OPTIONS", "-c search_path=matrixmatch,public")
 }
 
 
 def get_db_connection():
     """Create a new DB connection."""
-    return mysql.connector.connect(**DB_CONFIG)
+    return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
 
 # -----------------------------
@@ -93,14 +96,14 @@ def login():
         return redirect(url_for("login"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         # v1 schema: single `user` table with role ENUM('Admin','Researcher')
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email, role
-            FROM user
+            FROM "user"
             WHERE email = %s AND password = %s
             """,
             (email, password)
@@ -142,11 +145,11 @@ def register():
         return redirect(url_for("register"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         # Check if email already exists
-        cursor.execute("SELECT researcher_id FROM user WHERE email = %s", (email,))
+        cursor.execute('SELECT researcher_id FROM "user" WHERE email = %s', (email,))
         existing = cursor.fetchone()
         if existing:
             flash("Email already registered.", "warning")
@@ -155,7 +158,7 @@ def register():
         # Insert new researcher (role = 'Researcher')
         cursor.execute(
             """
-            INSERT INTO user (first_name, last_name, email, password, role)
+            INSERT INTO "user" (first_name, last_name, email, password, role)
             VALUES (%s, %s, %s, %s, 'Researcher')
             """,
             (first_name, last_name, email, password)
@@ -205,25 +208,25 @@ def admin_dashboard():
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         # Fetch admin user info
         cursor.execute(
             "SELECT researcher_id, first_name, last_name, email, role "
-            "FROM user WHERE researcher_id = %s",
+            'FROM "user" WHERE researcher_id = %s',
             (session["user_id"],)
         )
         user = cursor.fetchone()
 
         # ----- Stats -----
         cursor.execute(
-            "SELECT COUNT(*) AS total_researchers FROM user WHERE role='Researcher'"
+            'SELECT COUNT(*) AS total_researchers FROM "user" WHERE role=\'Researcher\''
         )
         total_researchers = cursor.fetchone()["total_researchers"]
 
         cursor.execute(
-            "SELECT COUNT(*) AS total_admins FROM user WHERE role='Admin'"
+            'SELECT COUNT(*) AS total_admins FROM "user" WHERE role=\'Admin\''
         )
         total_admins = cursor.fetchone()["total_admins"]
 
@@ -279,10 +282,10 @@ def researcher_dashboard():
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
-        # ✅ Get recent comparison history for this researcher
+        # Get recent comparison history for this researcher
         cursor.execute(
             """
             SELECT history_id,
@@ -328,7 +331,7 @@ def comparison_new():
         return render_template("comparison_new.html", user=user)
 
     # -----------------------------
-    # POST – form submission
+    # POST form submission
     # -----------------------------
     raw_keywords = request.form.get("keywords", "").strip()
     user_abstract = request.form.get("abstract", "").strip()
@@ -341,7 +344,7 @@ def comparison_new():
         return redirect(url_for("comparison_new"))
 
     # -----------------------------
-    # Parse threshold (percent -> 0–1)
+    # Parse threshold (percent -> 0-1)
     # -----------------------------
     try:
         threshold_pct = float(threshold_str)
@@ -396,7 +399,7 @@ def comparison_new():
     # -----------------------------
     history_id, matches = matcher.run_stage1(
         researcher_id=user["id"],
-        keywords=keywords,                 # ✅ clean Python list
+        keywords=keywords,                 # clean Python list
         user_abstract=user_abstract,
         academic_program_filter=program_filter,
         similarity_threshold=similarity_threshold,
@@ -429,7 +432,7 @@ def history():
     user = get_current_user()
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         cursor.execute(
@@ -554,13 +557,13 @@ def manage_researchers():
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email, registered_date
-            FROM user
+            FROM "user"
             WHERE role = 'Researcher'
             ORDER BY registered_date DESC
             """
@@ -597,7 +600,7 @@ def manage_researchers():
 #     try:
 #         cursor.execute(
 #             """
-#             UPDATE user
+#             UPDATE "user"
 #             SET password = %s
 #             WHERE researcher_id = %s AND role = 'Researcher'
 #             """,
@@ -632,7 +635,7 @@ def admin_delete_researcher(researcher_id):
         )
 
         cursor.execute(
-            "DELETE FROM user WHERE researcher_id = %s AND role = 'Researcher'",
+            'DELETE FROM "user" WHERE researcher_id = %s AND role = \'Researcher\'',
             (researcher_id,)
         )
         conn.commit()
@@ -654,14 +657,14 @@ def admin_view_history(researcher_id):
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         # Get researcher info
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email
-            FROM user
+            FROM "user"
             WHERE researcher_id = %s AND role = 'Researcher'
             """,
             (researcher_id,)
@@ -708,14 +711,14 @@ def admin_reset_password(researcher_id):
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     try:
         # Get the researcher record
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email
-            FROM user
+            FROM "user"
             WHERE researcher_id = %s AND role = 'Researcher'
             """,
             (researcher_id,)
@@ -753,7 +756,7 @@ def admin_reset_password(researcher_id):
         # Update the password in the DB (plain text for now, same as your existing login)
         cursor.execute(
             """
-            UPDATE user
+            UPDATE "user"
             SET password = %s
             WHERE researcher_id = %s
             """,
@@ -816,7 +819,7 @@ def history_heatmap(history_id):
         flash("Not enough data to build a heatmap for this entry.", "warning")
         return redirect(url_for("history_detail", history_id=history_id))
 
-    # ----- Build Stage 2 matrix (keyword × document) -----
+    # ----- Build Stage 2 matrix (keyword x document) -----
     matrix = matcher.build_stage2_matrix(keywords, matches)
     if matrix is None or matrix.empty:
         flash("Unable to build heatmap matrix for this entry.", "warning")
@@ -824,7 +827,7 @@ def history_heatmap(history_id):
 
     col_labels = list(matrix.columns)         # documents
     row_labels = list(matrix.index)           # keywords
-    values = matrix.values.tolist()           # 2D list of floats (0–1)
+    values = matrix.values.tolist()           # 2D list of floats (0-1)
 
     min_val = float(matrix.values.min())
     max_val = float(matrix.values.max())
@@ -859,3 +862,4 @@ def history_heatmap(history_id):
 # -----------------------------
 if __name__ == "__main__":
     app.run(debug=True)
+
