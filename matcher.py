@@ -2,7 +2,8 @@
 import json
 from typing import List, Tuple, Dict, Optional
 
-import mysql.connector
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 from matplotlib.figure import Figure
@@ -14,14 +15,16 @@ import os
 # -----------------------------
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
-    "user": os.getenv("DB_USER", "root"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "matrixmatch"),
+    "dbname": os.getenv("DB_NAME", "matrixmatch"),
+    "options": os.getenv("DB_OPTIONS", "-c search_path=matrixmatch,public"),
 }
 
 
 def get_db_connection():
-    return mysql.connector.connect(**DB_CONFIG)
+    return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
 
 
 # -----------------------------
@@ -64,7 +67,7 @@ def run_stage1(
     """
     # 1) Load docs
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     try:
         if academic_program_filter and academic_program_filter != "ALL":
             cursor.execute(
@@ -135,6 +138,7 @@ def run_stage1(
             (researcher_id, keywords, user_abstract,
              academic_program_filter, similarity_threshold, top_matches)
             VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING history_id
             """,
             (
                 researcher_id,
@@ -145,8 +149,8 @@ def run_stage1(
                 top_matches_str,
             ),
         )
+        history_id = cursor.fetchone()["history_id"]
         conn.commit()
-        history_id = cursor.lastrowid
     finally:
         cursor.close()
         conn.close()
@@ -317,13 +321,8 @@ def get_history_with_matches(history_id):
                  - similarity
     """
     # --- Connect to DB ---
-    conn = mysql.connector.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "matrixmatch"),
-    )
-    cur = conn.cursor(dictionary=True)
+    conn = get_db_connection()
+    cur = conn.cursor()
 
     try:
         # 1) Load history row + researcher info
@@ -333,7 +332,7 @@ def get_history_with_matches(history_id):
                 ch.*,
                 CONCAT(u.first_name, ' ', u.last_name) AS researcher_name
             FROM comparison_history ch
-            JOIN user u ON ch.researcher_id = u.researcher_id
+            JOIN "user" u ON ch.researcher_id = u.researcher_id
             WHERE ch.history_id = %s
             """,
             (history_id,),
@@ -432,7 +431,7 @@ def build_stage2_matrix(keywords: List[str], matches: List[Dict]) -> Optional[pd
     # fetch abstracts
     placeholders = ",".join(["%s"] * len(doc_ids))
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     try:
         cursor.execute(
             f"""
