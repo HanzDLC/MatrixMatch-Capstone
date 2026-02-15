@@ -25,8 +25,19 @@ def _get_int_env(name: str, default: int) -> int:
         return default
 
 
+def _get_bool_env(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _get_pool():
     global _pool, _pool_init_failed
+    # Use direct connections by default for compatibility/reliability.
+    if not _get_bool_env("DB_USE_POOL", False):
+        return None
+
     if _pool_init_failed:
         return None
 
@@ -57,9 +68,13 @@ def get_db_connection():
     if pool is None:
         return psycopg2.connect(**get_db_config(), cursor_factory=RealDictCursor)
 
-    conn = pool.getconn()
-    _pooled_conn_ids.add(id(conn))
-    return conn
+    try:
+        conn = pool.getconn()
+        _pooled_conn_ids.add(id(conn))
+        return conn
+    except Exception:
+        logger.exception("Failed to get pooled DB connection. Falling back to direct connection.")
+        return psycopg2.connect(**get_db_config(), cursor_factory=RealDictCursor)
 
 
 def close_db_connection(conn):
