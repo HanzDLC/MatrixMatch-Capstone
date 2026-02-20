@@ -1,60 +1,135 @@
 {% extends "base.html" %}
-{% block title %}Researcher Dashboard – MatrixMatch{% endblock %}
+{% block title %}Researcher Dashboard - MatrixMatch{% endblock %}
 
 {% block content %}
-<section class="page-header">
-    <h1 class="page-title">Welcome, {{ session.get('first_name') }}</h1>
-    <p class="page-subtitle">
-        Start a new comparison or revisit your previous runs.
-    </p>
-</section>
+{% set total_comparisons = stats.get('total_comparisons', recent_history|length) %}
+{% set avg_threshold = stats.get('avg_threshold_pct', 0) %}
+{% set recent_runs = stats.get('last_7_days_runs', 0) %}
 
-<section class="grid grid-2">
-    <a href="{{ url_for('comparison_new') }}" class="card card-clickable">
-        <h2 class="card-title">Start New Comparison</h2>
-        <p class="card-text">
-            Enter your keywords and upload your abstract to compare against the database.
-        </p>
-    </a>
+<div class="page-shell">
+    <section class="page-header">
+        <div>
+            <h1 class="page-title">Researcher Dashboard</h1>
+            <p class="page-subtitle">
+                Your central hub for starting comparisons and tracking recent runs.
+            </p>
+        </div>
+    </section>
 
-    <a href="{{ url_for('history') }}" class="card card-clickable">
-        <h2 class="card-title">View History</h2>
-        <p class="card-text">
-            Browse your past comparisons, inspect Stage 1 results and Stage 2 matrices.
-        </p>
-    </a>
-</section>
+    <section class="stat-grid">
+        <article class="stat-card">
+            <p class="card-label">Total Comparisons</p>
+            <p class="card-value">{{ total_comparisons }}</p>
+            <p class="stat-card__meta">All runs linked to your account.</p>
+            <span class="stat-card__icon">R1</span>
+        </article>
 
-<section class="section">
-    <div class="section-header">
-        <h2 class="section-title">Recent Activity</h2>
-    </div>
+        <article class="stat-card">
+            <p class="card-label">Avg. Threshold</p>
+            <p class="card-value">{{ avg_threshold }}%</p>
+            <p class="stat-card__meta">Based on submitted comparison settings.</p>
+            <span class="stat-card__icon">R2</span>
+        </article>
 
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Program</th>
-                <th>Threshold</th>
-                <th>Created At</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for row in recent_history %}
-                <tr>
-                    <td>#{{ row.history_id }}</td>
-                    <td>{{ row.academic_program_filter }}</td>
-                    <td>{{ (row.similarity_threshold * 100) | round(0) }}%</td>
-                    <td>{{ row.created_at }}</td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="4" class="table-empty">No recent comparisons yet.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
+        <article class="stat-card">
+            <p class="card-label">Runs Last 7 Days</p>
+            <p class="card-value">{{ recent_runs }}</p>
+            <p class="stat-card__meta">Recent comparison activity this week.</p>
+            <span class="stat-card__icon">R3</span>
+        </article>
+    </section>
+
+    <section class="dash-layout">
+        <article class="quick-start">
+            <p class="card-label">Quick Start</p>
+            <h2 class="quick-start__title">New Comparison</h2>
+            <p class="quick-start__text">
+                Launch a new run from here. Set your program scope first, then open the full comparison wizard.
+            </p>
+
+            <form action="{{ url_for('comparison_new') }}" method="get">
+                <div class="quick-start__field">
+                    <label for="quickProject" class="quick-start__label">Project Title</label>
+                    <input
+                        id="quickProject"
+                        type="text"
+                        class="form-input"
+                        placeholder="Example: AI in Precision Agriculture"
+                    >
+                </div>
+
+                <div class="quick-start__field">
+                    <label for="quickProgram" class="quick-start__label">Academic Program</label>
+                    <select id="quickProgram" name="program_filter" class="form-input">
+                        <option value="ALL">All Programs</option>
+                        <option value="BSIT">BSIT</option>
+                        <option value="BSCS">BSCS</option>
+                        <option value="BSIS">BSIS</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary btn-full" type="submit">
+                    Start Analysis
+                </button>
+            </form>
+        </article>
+
+        <article class="card">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title">Recent Comparisons</h2>
+                    <p class="card__subtitle">Latest runs from your history.</p>
+                </div>
+                <div class="card-head-actions">
+                    <span class="card-hint">Last 24h</span>
+                    <a href="{{ url_for('history') }}" class="link">View all</a>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Run ID</th>
+                            <th>Title / Topic</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_history %}
+                            {% set status_class = 'status-pill--success' if row.similarity_threshold >= 0.7 else 'status-pill--pending' %}
+                            {% set topic_preview = (row.keywords or '')[:56] %}
+                            <tr>
+                                <td>#RUN-{{ row.history_id }}</td>
+                                <td>
+                                    <strong>{{ topic_preview }}</strong>
+                                    <div class="card-hint">
+                                        {{ row.academic_program_filter }} - Threshold {{ (row.similarity_threshold * 100) | round(0) }}%
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if row.created_at %}
+                                        {{ row.created_at.strftime('%b %d, %I:%M %p') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="status-pill {{ status_class }}">
+                                        {{ 'Completed' if row.similarity_threshold >= 0.7 else 'Processing' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="table-empty">No recent comparisons yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </section>
+</div>
 {% endblock %}

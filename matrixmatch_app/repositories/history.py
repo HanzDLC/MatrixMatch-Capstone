@@ -74,3 +74,27 @@ def list_history_for_user(researcher_id: int):
             (researcher_id,),
         )
         return cursor.fetchall()
+
+
+def get_researcher_stats(researcher_id: int):
+    with db_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*) AS total_comparisons,
+                COALESCE(AVG(similarity_threshold), 0) AS avg_threshold,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS last_7_days_runs
+            FROM comparison_history
+            WHERE researcher_id = %s
+            """,
+            (researcher_id,),
+        )
+        return cursor.fetchone()

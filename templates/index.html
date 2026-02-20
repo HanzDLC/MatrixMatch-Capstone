@@ -4,59 +4,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatrixMatch - Research Abstract Matcher</title>
-
-    <!-- CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet"
+    >
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
-<body>
+<body data-theme="light" class="landing-page">
+    <div class="landing-shell">
+        <header class="landing-header">
+            <a href="{{ url_for('home') }}" class="landing-brand">MatrixMatch</a>
+            <nav class="landing-nav">
+                <a href="{{ url_for('home') }}">Home</a>
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            </nav>
+            <button
+                type="button"
+                id="themeToggle"
+                class="icon-button theme-toggle"
+                aria-label="Toggle dark or light mode"
+            >
+                <span class="theme-toggle__icon" id="themeToggleIcon">Light</span>
+            </button>
+        </header>
 
-    <!-- NAVBAR -->
-    <nav class="navbar">
-        <div class="logo">MatrixMatch</div>
-        <div class="nav-links">
-            <a href="#">Home</a>
-            <a href="#">Login</a>
-            <a href="#">About</a>
-        </div>
-    </nav>
-
-    <!-- HERO SECTION -->
-    <section class="hero">
-        <div class="hero-content">
-            <h1>Research Abstract Matching Made Easy</h1>
-            <p>Compare your research concept against existing academic abstracts using NLP-powered similarity scoring.</p>
-            <button class="cta-btn">Get Started</button>
-        </div>
-    </section>
-
-    <!-- FEATURES SECTION -->
-    <section class="features">
-        <h2>What MatrixMatch Can Do</h2>
-
-        <div class="features-container">
-            <div class="feature-card">
-                <h3>Stage 1 Matching</h3>
-                <p>Compare your abstract against the database using cosine similarity from SentenceTransformers.</p>
+        <section class="landing-hero">
+            <div class="landing-hero__content">
+                <p class="landing-kicker">Semantic Research Intelligence</p>
+                <h1>Research Abstract Matching Built for Real Review Workflows</h1>
+                <p>
+                    MatrixMatch compares your abstract against academic documents, reveals sentence-level semantic
+                    overlap, and visualizes topic alignment in one streamlined system.
+                </p>
+                <div class="landing-hero__actions">
+                    <a href="{{ url_for('login') }}" class="btn btn-primary cta-btn">Get Started</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
+                </div>
             </div>
+            <aside class="landing-hero__panel">
+                <h2>Live Platform Snapshot</h2>
+                <div class="landing-metrics">
+                    <article class="landing-metric-card">
+                        <p class="landing-metric-card__label">Comparisons Processed</p>
+                        <p class="landing-metric-card__value">1,284</p>
+                        <p class="landing-metric-card__meta">Across active researchers</p>
+                    </article>
+                    <article class="landing-metric-card">
+                        <p class="landing-metric-card__label">Average Similarity Score</p>
+                        <p class="landing-metric-card__value">76.4%</p>
+                        <p class="landing-metric-card__meta">For successful stage 1 runs</p>
+                    </article>
+                    <article class="landing-metric-card">
+                        <p class="landing-metric-card__label">Sentence Pairing</p>
+                        <p class="landing-metric-card__value">Hover-linked</p>
+                        <p class="landing-metric-card__meta">Precision inspection in history detail</p>
+                    </article>
+                </div>
+            </aside>
+        </section>
 
-            <div class="feature-card">
-                <h3>Stage 2 Analysis</h3>
-                <p>Generate keyword-vs-abstract similarity matrices with interactive heatmaps.</p>
+        <section class="landing-section">
+            <div class="landing-section__header">
+                <h2>What MatrixMatch Delivers</h2>
+                <p>Built for quick screening and deeper semantic analysis.</p>
             </div>
-
-            <div class="feature-card">
-                <h3>History Tracking</h3>
-                <p>Automatically save and view past comparisons, including detailed matrix results.</p>
+            <div class="landing-feature-grid">
+                <article class="landing-feature-card">
+                    <p class="landing-feature-card__tag">Stage 1</p>
+                    <h3>Document Similarity Match</h3>
+                    <p>
+                        Compare your full abstract against stored documents with configurable program filters and
+                        threshold precision.
+                    </p>
+                </article>
+                <article class="landing-feature-card">
+                    <p class="landing-feature-card__tag">Stage 2</p>
+                    <h3>Keyword Heatmap Matrix</h3>
+                    <p>
+                        Evaluate keyword-to-document relationship strength in a dynamic heatmap table for targeted
+                        topic validation.
+                    </p>
+                </article>
+                <article class="landing-feature-card">
+                    <p class="landing-feature-card__tag">Review</p>
+                    <h3>Sentence-Level Pairing</h3>
+                    <p>
+                        Hover linked highlights to inspect semantically matched sentence pairs side by side in detail
+                        history view.
+                    </p>
+                </article>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- FOOTER -->
-    <footer>
-        <p>MatrixMatch © 2025 — Research Comparison Tool</p>
-    </footer>
+        <section class="landing-section landing-section--workflow">
+            <div class="landing-section__header">
+                <h2>Three-Step Comparison Flow</h2>
+                <p>Move from submission to insight in minutes.</p>
+            </div>
+            <div class="landing-workflow">
+                <article class="landing-workflow__step">
+                    <span>01</span>
+                    <h3>Enter Keywords + Abstract</h3>
+                    <p>Define your topic scope and provide your complete research abstract.</p>
+                </article>
+                <article class="landing-workflow__step">
+                    <span>02</span>
+                    <h3>Run Similarity Analysis</h3>
+                    <p>MatrixMatch computes document and sentence-level semantic relationships.</p>
+                </article>
+                <article class="landing-workflow__step">
+                    <span>03</span>
+                    <h3>Inspect Matches and Matrix</h3>
+                    <p>Use detailed history views, hover links, and heatmaps for fast interpretation.</p>
+                </article>
+            </div>
+        </section>
 
-    <!-- JavaScript -->
+        <footer class="landing-footer">
+            <p>MatrixMatch 2026 - Research Comparison Platform</p>
+            <div class="landing-footer__links">
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            </div>
+        </footer>
+    </div>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

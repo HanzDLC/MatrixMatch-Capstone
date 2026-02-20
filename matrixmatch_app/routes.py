@@ -95,6 +95,7 @@ def register_routes(app):
         return render_template(
             "dashboard_researcher.html",
             user=user,
+            stats=data.get("stats", {}),
             recent_history=data["recent_history"],
         )
 
@@ -146,6 +147,10 @@ def register_routes(app):
 
         keywords = parse_keywords(history_entry.get("keywords"))
         heatmap_data_uri = comparison_service.build_history_heatmap_data_uri(keywords, matches)
+        semantic_highlights = matcher.build_semantic_sentence_highlights(
+            user_abstract=history_entry.get("user_abstract", ""),
+            matches=matches,
+        )
 
         return render_template(
             "history_detail.html",
@@ -154,15 +159,19 @@ def register_routes(app):
             matches=matches,
             keywords=keywords,
             heatmap_data_uri=heatmap_data_uri,
+            semantic_highlights=semantic_highlights,
         )
 
     @app.route("/admin/researchers")
     @role_required("Admin")
     def manage_researchers():
+        dashboard_data = dashboard_service.get_admin_dashboard_data(session["user_id"]) or {}
         return render_template(
             "manage_researchers.html",
             user=get_current_user(),
             researchers=admin_service.list_researchers(),
+            stats=dashboard_data.get("stats", {}),
+            recent_history=dashboard_data.get("recent_history", []),
         )
 
     @app.route("/admin/researchers/<int:researcher_id>/delete", methods=["POST"])

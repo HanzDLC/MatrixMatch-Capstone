@@ -1,85 +1,82 @@
 {% extends "base.html" %}
-{% block title %}History – MatrixMatch{% endblock %}
+{% block title %}Comparison History - MatrixMatch{% endblock %}
 
 {% block content %}
-
-<style>
-    /* Outline button style */
-    .view-btn {
-        padding: 6px 12px;
-        border: 2px solid #2563eb;     /* blue outline */
-        color: #2563eb;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: 0.15s ease-in-out;
-    }
-    .view-btn:hover {
-        background-color: #2563eb;
-        color: #ffffff;
-    }
-</style>
-
-<section class="page-header">
-    <h1 class="page-title">Comparison History</h1>
-    <p class="page-subtitle">
-        Browse your past runs. Click a row to view Stage 1 & Stage 2 details.
-    </p>
-</section>
-
-<section class="section">
-    <div class="table-controls">
-        <input
-            type="text"
-            id="historySearch"
-            class="form-input"
-            placeholder="Search by keywords, program, or ID..."
-        >
-    </div>
-
-    <div class="table-wrapper">
-        <table class="table" id="historyTable">
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Keywords</th>
-                <th>Program</th>
-                <th>Threshold</th>
-                <th>Created At</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            {% if history_rows and history_rows|length > 0 %}
-                {% for row in history_rows %}
-                <tr>
-                    <td>{{ row.history_id }}</td>
-                    <td>{{ row.keywords }}</td>
-                    <td>{{ row.academic_program_filter }}</td>
-                    <td>{{ (row.similarity_threshold * 100)|round(0) }}%</td>
-                    <td>{{ row.created_at }}</td>
-                    <td>
-                        <a
-                            href="{{ url_for('history_detail', history_id=row.history_id) }}"
-                            class="view-btn"
-                        >
-                            View History
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="6" class="table-empty">
-                        No history entries found.
-                    </td>
-                </tr>
+<div class="page-shell">
+    <section class="page-header">
+        <div>
+            <h1 class="page-title">Comparison History</h1>
+            <p class="page-subtitle">
+                Review past runs and open detailed semantic analysis for each comparison.
+            </p>
+            {% if selected_researcher %}
+                <p class="page-subtitle">
+                    Viewing history for {{ selected_researcher.first_name }} {{ selected_researcher.last_name }}.
+                </p>
             {% endif %}
-            </tbody>
-        </table>
-    </div>
-</section>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title">Saved Runs</h2>
+                <p class="card__subtitle">Filter by keyword, program, threshold, or date.</p>
+            </div>
+            <div class="table-controls">
+                <input
+                    type="text"
+                    id="historySearch"
+                    class="form-input form-input--sm"
+                    placeholder="Search history..."
+                >
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Keywords</th>
+                        <th>Program</th>
+                        <th>Threshold</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if history_rows and history_rows|length > 0 %}
+                        {% for row in history_rows %}
+                            <tr>
+                                <td>#{{ row.history_id }}</td>
+                                <td>{{ row.keywords }}</td>
+                                <td>{{ row.academic_program_filter }}</td>
+                                <td>{{ (row.similarity_threshold * 100) | round(0) }}%</td>
+                                <td>
+                                    {% if row.created_at %}
+                                        {{ row.created_at.strftime('%Y-%m-%d %I:%M %p') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('history_detail', history_id=row.history_id) }}" class="btn btn-ghost btn-sm">
+                                        View Detail
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="table-empty">No history entries found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}

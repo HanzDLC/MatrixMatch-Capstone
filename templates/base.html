@@ -5,69 +5,147 @@
     <title>{% block title %}MatrixMatch{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Google Font (optional but clean) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet"
+    >
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
-<div class="app-shell">
-    <!-- Topbar -->
+{% set is_authenticated = session and session.get('user_id') %}
+{% set endpoint = request.endpoint or '' %}
+<body data-theme="light">
+<div class="app-shell{% if not is_authenticated %} app-shell--public{% endif %}">
     <header class="topbar">
         <div class="topbar__left">
-            <button class="icon-button topbar__menu-btn" id="sidebarToggle" aria-label="Toggle navigation">
-                ☰
-            </button>
-            <span class="topbar__brand">MatrixMatch</span>
+            {% if is_authenticated %}
+                <button
+                    class="icon-button topbar__menu-btn"
+                    id="sidebarToggle"
+                    aria-label="Toggle navigation"
+                    type="button"
+                >
+                    Menu
+                </button>
+            {% endif %}
+            <a href="{{ url_for('home') }}" class="topbar__brand">MatrixMatch</a>
         </div>
         <div class="topbar__right">
-            {% if session and session.get('first_name') %}
+            {% if is_authenticated %}
+                <button
+                    type="button"
+                    class="icon-button notif-btn"
+                    aria-label="Notifications"
+                >
+                    Alerts
+                    <span class="notif-btn__dot"></span>
+                </button>
+            {% endif %}
+            <button
+                type="button"
+                id="themeToggle"
+                class="icon-button theme-toggle"
+                aria-label="Toggle dark or light mode"
+            >
+                <span class="theme-toggle__icon" id="themeToggleIcon">Light</span>
+            </button>
+            {% if is_authenticated %}
                 <span class="topbar__user">
                     {{ session.get('first_name') }} {{ session.get('last_name') }}
-                    <span class="topbar__role">({{ session.get('role') }})</span>
+                    <span class="topbar__role">{{ session.get('role') }}</span>
                 </span>
                 <a class="topbar__link" href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a class="topbar__link" href="{{ url_for('login') }}">Login</a>
             {% endif %}
         </div>
     </header>
 
-    <div class="layout">
-        <!-- Sidebar -->
-        <nav class="sidebar" id="sidebar">
-            <div class="sidebar__section">
-                <div class="sidebar__title">Navigation</div>
-                <a href="{{ url_for('dashboard') }}" class="sidebar__link">
-                    Dashboard
-                </a>
-                <a href="{{ url_for('comparison_new') }}" class="sidebar__link">
-                    Start New Comparison
-                </a>
-                <a href="{{ url_for('history') }}" class="sidebar__link">
-                    View History
-                </a>
-            </div>
-
-            {% if session and session.get('role') == 'Admin' %}
+    <div class="layout{% if not is_authenticated %} layout--public{% endif %}">
+        {% if is_authenticated %}
+            <nav class="sidebar" id="sidebar">
                 <div class="sidebar__section">
-                    <div class="sidebar__title">Admin</div>
-                    <a href="{{ url_for('manage_researchers') }}" class="sidebar__link">
-                        Manage Researchers
+                    <div class="sidebar__title">Navigation</div>
+                    <a
+                        href="{{ url_for('dashboard') }}"
+                        class="sidebar__link{% if endpoint in ['dashboard', 'researcher_dashboard', 'admin_dashboard'] %} is-active{% endif %}"
+                        data-icon="DB"
+                    >
+                        Dashboard
+                    </a>
+                    <a
+                        href="{{ url_for('comparison_new') }}"
+                        class="sidebar__link{% if endpoint == 'comparison_new' %} is-active{% endif %}"
+                        data-icon="NC"
+                    >
+                        New Comparison
+                    </a>
+                    <a
+                        href="{{ url_for('history') }}"
+                        class="sidebar__link{% if endpoint in ['history', 'history_detail', 'history_heatmap', 'admin_view_history'] %} is-active{% endif %}"
+                        data-icon="VH"
+                    >
+                        View History
                     </a>
                 </div>
-            {% endif %}
-        </nav>
 
-        <!-- Main Content -->
+                {% if session.get('role') == 'Admin' %}
+                    <div class="sidebar__section">
+                        <div class="sidebar__title">Admin</div>
+                        <a
+                            href="{{ url_for('manage_researchers') }}"
+                            class="sidebar__link{% if endpoint in ['manage_researchers', 'admin_reset_password'] %} is-active{% endif %}"
+                            data-icon="MR"
+                        >
+                            Manage Researchers
+                        </a>
+                    </div>
+                {% endif %}
+
+                <div class="sidebar__footer">
+                    <div class="sidebar__avatar">
+                        {{ (session.get('first_name') or 'U')[:1] }}{{ (session.get('last_name') or '')[:1] }}
+                    </div>
+                    <div>
+                        <div class="sidebar__name">
+                            {{ session.get('first_name') }} {{ session.get('last_name') }}
+                        </div>
+                        <div class="sidebar__email">{{ session.get('email') }}</div>
+                    </div>
+                </div>
+            </nav>
+        {% endif %}
+
         <main class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-stack">
+                        {% for category, message in messages %}
+                            <div class="flash flash--{{ category }}" role="status" aria-live="polite">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
             {% block content %}{% endblock %}
+            {% if is_authenticated %}
+                <footer class="app-footer">
+                    <span>&copy; 2026 MatrixMatch Research Systems.</span>
+                    <div class="app-footer__links">
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                        <a href="#">Help Center</a>
+                    </div>
+                </footer>
+            {% endif %}
         </main>
     </div>
 </div>
+<button type="button" id="backToTop" class="back-to-top" aria-label="Back to top">Top</button>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block extra_scripts %}{% endblock %}

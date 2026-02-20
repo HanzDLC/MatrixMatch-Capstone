@@ -1,91 +1,109 @@
 {% extends "base.html" %}
-{% block title %}New Comparison – MatrixMatch{% endblock %}
-
-{% block extra_head %}
-    <!-- could add page-specific styles here if needed -->
-{% endblock %}
+{% block title %}Start New Comparison - MatrixMatch{% endblock %}
 
 {% block content %}
-<section class="page-header">
-    <h1 class="page-title">Start New Comparison</h1>
-    <p class="page-subtitle">
-        Provide your research keywords and abstract, then choose program and similarity threshold.
-    </p>
-</section>
-
-<section class="section">
-    <form class="form-grid" id="comparisonForm" method="post" action="{{ url_for('comparison_new') }}">
-        <!-- Keywords -->
-        <div class="form-block">
-            <label class="form-label">Keywords (min 5)</label>
-            <p class="form-help">
-                Type a keyword and press Enter to add it. You can remove keywords by clicking on them.
+{% set default_program = request.args.get('program_filter', 'ALL') %}
+<div class="page-shell">
+    <section class="page-header">
+        <div>
+            <h1 class="page-title">Start New Research Comparison</h1>
+            <p class="page-subtitle">
+                Follow the three-step process to compare your abstract against stored documents.
             </p>
-            <div class="chip-input" id="keywordInputWrapper">
-                <div class="chip-list" id="keywordList"></div>
-                <input
-                    type="text"
-                    id="keywordInput"
-                    class="chip-input__field"
-                    placeholder="Type a keyword and press Enter"
-                    autocomplete="off"
-                >
+        </div>
+    </section>
+
+    <section class="comparison-wizard">
+        <div class="wizard-steps">
+            <article class="wizard-step">
+                <p class="wizard-step__label">Step 1</p>
+                <p class="wizard-step__title">Keywords</p>
+            </article>
+            <article class="wizard-step">
+                <p class="wizard-step__label">Step 2</p>
+                <p class="wizard-step__title">Abstract Context</p>
+            </article>
+            <article class="wizard-step">
+                <p class="wizard-step__label">Step 3</p>
+                <p class="wizard-step__title">Threshold and Program</p>
+            </article>
+        </div>
+
+        <form class="form-grid card" id="comparisonForm" method="post" action="{{ url_for('comparison_new') }}">
+            <div class="form-block">
+                <label class="form-label">Keywords (minimum 5)</label>
+                <p class="form-help">
+                    Type a keyword then press Enter. Remove a keyword using the close mark on each tag.
+                </p>
+                <div class="chip-input" id="keywordInputWrapper">
+                    <div class="chip-list" id="keywordList"></div>
+                    <input
+                        type="text"
+                        id="keywordInput"
+                        class="chip-input__field"
+                        placeholder="Example: object detection"
+                        autocomplete="off"
+                    >
+                </div>
+                <input type="hidden" name="keywords" id="keywordsHidden">
+                <p class="form-help" id="keywordCountText">0 keywords added.</p>
             </div>
-            <input type="hidden" name="keywords" id="keywordsHidden">
-            <div class="form-help" id="keywordCountText">0 keywords added.</div>
-        </div>
 
-        <!-- Abstract -->
-        <div class="form-block">
-            <label for="abstract" class="form-label">Abstract</label>
-            <textarea
-                id="abstract"
-                name="abstract"
-                class="form-textarea"
-                rows="10"
-                placeholder="Paste or type your abstract here..."
-                required
-            ></textarea>
-        </div>
+            <div class="form-block">
+                <label for="abstract" class="form-label">Research Abstract</label>
+                <textarea
+                    id="abstract"
+                    name="abstract"
+                    class="form-textarea"
+                    rows="11"
+                    placeholder="Paste the full abstract you want to compare..."
+                    required
+                ></textarea>
+                <p class="form-help abstract-meta" id="abstractMeta">
+                    0 words | 0 characters
+                </p>
+            </div>
 
-        <!-- Filters -->
-        <div class="form-block">
-            <label for="program_filter" class="form-label">Academic Program Filter</label>
-            <select id="program_filter" name="program_filter" class="form-input">
-                <option value="ALL">All Programs</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSIS">BSIS</option>
-            </select>
-        </div>
+            <div class="grid grid-2">
+                <div class="form-block">
+                    <label for="program_filter" class="form-label">Academic Program</label>
+                    <select id="program_filter" name="program_filter" class="form-input">
+                        <option value="ALL" {% if default_program == 'ALL' %}selected{% endif %}>All Programs</option>
+                        <option value="BSIT" {% if default_program == 'BSIT' %}selected{% endif %}>BSIT</option>
+                        <option value="BSCS" {% if default_program == 'BSCS' %}selected{% endif %}>BSCS</option>
+                        <option value="BSIS" {% if default_program == 'BSIS' %}selected{% endif %}>BSIS</option>
+                    </select>
+                </div>
 
-        <div class="form-block">
-            <label for="threshold" class="form-label">
-                Minimum Similarity Threshold
-                <span id="thresholdValue">60%</span>
-            </label>
-            <input
-                type="range"
-                id="threshold"
-                name="threshold"
-                min="60"
-                max="100"
-                step="5"
-                value="60"
-                class="range-input"
-            >
-        </div>
+                <div class="form-block range-group">
+                    <label for="threshold" class="form-label">
+                        Similarity Threshold <span id="thresholdValue">60%</span>
+                    </label>
+                    <input
+                        type="range"
+                        id="threshold"
+                        name="threshold"
+                        min="60"
+                        max="100"
+                        step="5"
+                        value="60"
+                        class="range-input"
+                    >
+                    <div class="range-marks">
+                        <span>60%</span>
+                        <span>80%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+            </div>
 
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                Run Comparison
-            </button>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-                Cancel
-            </a>
-        </div>
-    </form>
-</section>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Run Comparison</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
