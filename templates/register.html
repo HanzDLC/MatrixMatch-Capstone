@@ -1,17 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Register – MatrixMatch{% endblock %}
+{% block title %}Register - MatrixMatch{% endblock %}
 
 {% block content %}
 <div class="auth-page">
     <div class="auth-card">
         <h1 class="auth-title">Create a Researcher Account</h1>
-        <p class="auth-subtitle">
-            Register to start comparing your abstracts against existing works.
-        </p>
+        <p class="auth-subtitle">Register to start running semantic comparisons.</p>
 
         <form class="auth-form" method="post" action="{{ url_for('register') }}">
             <div class="form-field">
-                <label for="first_name" class="form-label">First name</label>
+                <label for="first_name" class="form-label">First Name</label>
                 <input
                     id="first_name"
                     name="first_name"
@@ -23,7 +21,7 @@
             </div>
 
             <div class="form-field">
-                <label for="last_name" class="form-label">Last name</label>
+                <label for="last_name" class="form-label">Last Name</label>
                 <input
                     id="last_name"
                     name="last_name"
@@ -53,19 +51,16 @@
                     name="password"
                     type="password"
                     class="form-input"
-                    placeholder="••••••••"
+                    placeholder="********"
                     required
                 >
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">
-                Create account
-            </button>
+            <button type="submit" class="btn btn-primary btn-full">Create Account</button>
 
             <p class="auth-footer-text">
                 Already have an account?
-                <a href="#" class="link js-go-login">Sign in</a>
-
+                <a href="{{ url_for('login') }}" class="link">Sign in</a>
             </p>
         </form>
     </div>

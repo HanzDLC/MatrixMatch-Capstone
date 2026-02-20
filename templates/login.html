@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Login – MatrixMatch{% endblock %}
+{% block title %}Login - MatrixMatch{% endblock %}
 
 {% block content %}
 <div class="auth-page">
     <div class="auth-card">
         <h1 class="auth-title">Sign in to MatrixMatch</h1>
-        <p class="auth-subtitle">Compare your research abstracts against existing works.</p>
+        <p class="auth-subtitle">Compare your research abstract against existing documents.</p>
 
         <form class="auth-form" method="post" action="{{ url_for('login') }}">
             <div class="form-field">
@@ -27,17 +27,15 @@
                     name="password"
                     type="password"
                     class="form-input"
-                    placeholder="••••••••"
+                    placeholder="********"
                     required
                 >
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">
-                Sign in
-            </button>
+            <button type="submit" class="btn btn-primary btn-full">Sign in</button>
 
             <p class="auth-footer-text">
-                Don’t have an account?
+                Do not have an account?
                 <a href="{{ url_for('register') }}" class="link">Register as Researcher</a>
             </p>
         </form>

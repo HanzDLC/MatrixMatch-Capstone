@@ -1,60 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Admin Dashboard – MatrixMatch{% endblock %}
+{% block title %}Admin Dashboard - MatrixMatch{% endblock %}
 
 {% block content %}
-<section class="page-header">
-    <h1 class="page-title">Admin Dashboard</h1>
-    <p class="page-subtitle">
-        Overview of researcher activity and comparison runs.
-    </p>
-</section>
+<div class="page-shell">
+    <section class="page-header">
+        <div>
+            <h1 class="page-title">Admin Dashboard</h1>
+            <p class="page-subtitle">
+                Track platform health, researcher growth, and recent comparison runs.
+            </p>
+        </div>
+    </section>
 
-<section class="grid grid-3">
-    <div class="card">
-        <div class="card-label">Total Researchers</div>
-        <div class="card-value">{{ stats.total_researchers or 0 }}</div>
-    </div>
+    <section class="stat-grid">
+        <article class="stat-card">
+            <p class="card-label">Total Researchers</p>
+            <p class="card-value">{{ stats.get('total_researchers', 0) }}</p>
+            <p class="stat-card__meta">Registered researcher accounts.</p>
+            <span class="stat-card__icon">A1</span>
+        </article>
 
-    <div class="card">
-        <div class="card-label">Total Comparisons</div>
-        <div class="card-value">{{ stats.total_comparisons or 0 }}</div>
-    </div>
+        <article class="stat-card">
+            <p class="card-label">Total Comparisons</p>
+            <p class="card-value">{{ stats.get('total_comparisons', 0) }}</p>
+            <p class="stat-card__meta">Comparison runs in the platform.</p>
+            <span class="stat-card__icon">A2</span>
+        </article>
 
-    <div class="card">
-        <div class="card-label">Last 7 Days Runs</div>
-        <div class="card-value">{{ stats.last_7_days_runs or 0 }}</div>
-    </div>
-</section>
+        <article class="stat-card">
+            <p class="card-label">Runs Last 7 Days</p>
+            <p class="card-value">{{ stats.get('last_7_days_runs', 0) }}</p>
+            <p class="stat-card__meta">Recent run velocity.</p>
+            <span class="stat-card__icon">A3</span>
+        </article>
+    </section>
 
-<section class="section">
-    <div class="section-header">
-        <h2 class="section-title">Recent Comparison Runs</h2>
-        <a href="{{ url_for('history') }}" class="link">View all history →</a>
-    </div>
+    <section class="card">
+        <div class="card__header">
+            <div>
+                <h2 class="card__title">Recent Comparison Runs</h2>
+                <p class="card__subtitle">Most recent entries from comparison history.</p>
+            </div>
+            <a href="{{ url_for('history') }}" class="link">View all history</a>
+        </div>
 
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Researcher</th>
-                <th>Program</th>
-                <th>Threshold</th>
-                <th>Created At</th>
-            </tr>
-            </thead>
-<tbody>
-    {% for row in recent_history %}
-    <tr>
-        <td>{{ row.history_id }}</td>
-        <td>{{ row.researcher_name }}</td>
-        <td>{{ row.academic_program_filter }}</td>
-        <td>{{ (row.similarity_threshold * 100)|round(0) }}%</td>
-        <td>{{ row.created_at }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
-        </table>
-    </div>
-</section>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Researcher</th>
+                        <th>Program</th>
+                        <th>Threshold</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in recent_history %}
+                        <tr>
+                            <td>{{ row.history_id }}</td>
+                            <td>{{ row.researcher_name }}</td>
+                            <td>{{ row.academic_program_filter }}</td>
+                            <td>{{ (row.similarity_threshold * 100) | round(0) }}%</td>
+                            <td>
+                                {% if row.created_at %}
+                                    {{ row.created_at.strftime('%Y-%m-%d %I:%M %p') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="table-empty">No recent runs yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}

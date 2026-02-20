@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}History #{{ history.history_id }} – MatrixMatch{% endblock %}
+{% block title %}History #{{ history.history_id }} - MatrixMatch{% endblock %}
 
 {% block content %}
 <div class="page">
@@ -7,25 +7,20 @@
         <div>
             <h1 class="page__title">History #{{ history.history_id }}</h1>
             <p class="page__subtitle">
-                Comparison run details – Stage 1 matches and Stage 2 keyword vs abstract view.
+                Detailed view of stage 1 matches, semantic sentence links, and stage 2 matrix access.
             </p>
         </div>
-
-        <a href="{{ url_for('history') }}" class="btn btn-secondary">
-            ← Back to History
-        </a>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary">Back to History</a>
     </div>
 
     <div class="page__content history-detail">
-        <!-- Summary + Keywords -->
         <div class="history-detail__grid">
-            <!-- Summary card -->
             <section class="card">
                 <div class="card__header">
-                    <h2 class="card__title">Run Summary</h2>
-                    <p class="card__subtitle">
-                        Basic information about this comparison run.
-                    </p>
+                    <div>
+                        <h2 class="card__title">Run Summary</h2>
+                        <p class="card__subtitle">Core metadata for this comparison run.</p>
+                    </div>
                 </div>
                 <div class="card__body">
                     <dl class="meta-list">
@@ -53,13 +48,12 @@
                 </div>
             </section>
 
-            <!-- Keywords card -->
             <section class="card">
                 <div class="card__header">
-                    <h2 class="card__title">Keywords</h2>
-                    <p class="card__subtitle">
-                        The set of keywords used for Stage 2 similarity analysis.
-                    </p>
+                    <div>
+                        <h2 class="card__title">Keywords</h2>
+                        <p class="card__subtitle">Terms used for stage 2 similarity scoring.</p>
+                    </div>
                 </div>
                 <div class="card__body">
                     {% if keywords and keywords|length > 0 %}
@@ -69,21 +63,18 @@
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="empty-state">
-                            No keywords were saved for this run.
-                        </p>
+                        <p class="empty-state">No keywords were saved for this run.</p>
                     {% endif %}
                 </div>
             </section>
         </div>
 
-        <!-- Stage 1 Matches -->
         <section class="card">
             <div class="card__header">
                 <div>
                     <h2 class="card__title">Stage 1 Matches</h2>
                     <p class="card__subtitle">
-                        Documents that passed the similarity threshold for the user abstract.
+                        Documents that passed the configured semantic similarity threshold.
                     </p>
                 </div>
             </div>
@@ -93,10 +84,10 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">Doc ID</th>
+                                <th>Doc ID</th>
                                 <th>Title</th>
-                                <th style="width: 140px;">Program</th>
-                                <th style="width: 120px;">Similarity</th>
+                                <th>Program</th>
+                                <th>Similarity</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,27 +103,109 @@
                     </table>
                 </div>
             {% else %}
-                <p class="empty-state">
-                    No Stage 1 matches were saved for this history entry.
-                </p>
+                <p class="empty-state">No stage 1 matches were saved for this history entry.</p>
             {% endif %}
         </section>
 
-        <!-- Stage 2 Heatmap (link to full-page table) -->
+        <section class="card">
+            <div class="card__header">
+                <div>
+                    <h2 class="card__title">Semantic Sentence Highlights</h2>
+                    <p class="card__subtitle">
+                        Hover a sentence or row to trace paired semantic matches across both abstracts.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card__body">
+                {% if semantic_highlights and semantic_highlights|length > 0 %}
+                    {% for highlight in semantic_highlights %}
+                        <div class="mb-3 semantic-highlight-block" data-highlight-doc="{{ highlight.document_id }}">
+                            <h3 class="card-title">{{ highlight.title }} (ID:{{ highlight.document_id }})</h3>
+                            <p class="card-hint mb-2">
+                                Stage 1 Similarity: {{ (highlight.document_similarity * 100) | round(2) }}%
+                            </p>
+
+                            <div class="semantic-split">
+                                <div class="semantic-box">
+                                    <h4>Your Abstract</h4>
+                                    <div>
+                                        {% for sentence in highlight.user_overview_items %}
+                                            <span
+                                                class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
+                                                data-pair-list="{{ sentence.pair_ids | join(',') }}"
+                                            >{{ sentence.html | safe }}</span>{% if not loop.last %} {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="semantic-box">
+                                    <h4>{{ highlight.title }} Abstract</h4>
+                                    <div>
+                                        {% for sentence in highlight.doc_overview_items %}
+                                            <span
+                                                class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
+                                                data-pair-list="{{ sentence.pair_ids | join(',') }}"
+                                            >{{ sentence.html | safe }}</span>{% if not loop.last %} {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Your Sentence</th>
+                                            <th>Matched Sentence</th>
+                                            <th>Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pair in highlight.pairs %}
+                                            <tr
+                                                class="semantic-pair-row"
+                                                data-pair-id="{{ pair.pair_id }}"
+                                                data-user-text="{{ pair.user_sentence_plain | e }}"
+                                                data-doc-text="{{ pair.doc_sentence_plain | e }}"
+                                                data-score="{{ (pair.similarity * 100) | round(2) }}"
+                                            >
+                                                <td>{{ pair.user_sentence_html | safe }}</td>
+                                                <td>{{ pair.doc_sentence_html | safe }}</td>
+                                                <td>{{ (pair.similarity * 100) | round(2) }}%</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">
+                        No sentence-level semantic overlaps were strong enough for this history entry.
+                    </p>
+                {% endif %}
+
+                <div class="semantic-hover-card" id="semanticHoverCard" hidden>
+                    <h4 class="semantic-hover-card__title">Paired Semantic Sentences</h4>
+                    <p class="semantic-hover-card__item" id="semanticHoverUser"></p>
+                    <p class="semantic-hover-card__item" id="semanticHoverDoc"></p>
+                    <p class="semantic-hover-card__score" id="semanticHoverScore"></p>
+                </div>
+            </div>
+        </section>
+
         <section class="card">
             <div class="card__header">
                 <div>
                     <h2 class="card__title">Stage 2 Matrix</h2>
                     <p class="card__subtitle">
-                        View the keyword × document similarity matrix in a dedicated full-page table.
+                        Open the keyword by document matrix table in a dedicated view.
                     </p>
                 </div>
             </div>
             <div class="card__body heatmap-section">
                 {% if matches and matches|length > 0 and keywords and keywords|length > 0 %}
-                    <p class="mb-2">
-                        Click the button below to open the Stage 2 heatmap matrix in a new tab.
-                    </p>
+                    <p class="mb-2">Open the full table to inspect keyword-level similarity distribution.</p>
                     <a
                         href="{{ url_for('history_heatmap', history_id=history.history_id) }}"
                         target="_blank"
@@ -142,11 +215,15 @@
                     </a>
                 {% else %}
                     <p class="empty-state">
-                        Not enough data to build a matrix. Ensure there are both keywords and Stage 1 matches.
+                        Not enough data to build a matrix. You need both keywords and stage 1 matches.
                     </p>
                 {% endif %}
             </div>
         </section>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/history_detail.js') }}"></script>
 {% endblock %}
