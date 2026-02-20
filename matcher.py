@@ -9,9 +9,6 @@ from sentence_transformers import SentenceTransformer, util
 from matrixmatch_app.db import db_cursor
 from matrixmatch_app.parsers import parse_keywords
 
-# -----------------------------
-# SBERT model (cached)
-# -----------------------------
 _model = None
 
 
@@ -69,9 +66,6 @@ def _parse_top_matches(raw_top_matches: str) -> List[Tuple[int, float]]:
     return doc_pairs
 
 
-# -----------------------------
-# Stage 1: Abstract vs Documents
-# -----------------------------
 def run_stage1(
     researcher_id: int,
     keywords: List[str],
@@ -79,9 +73,7 @@ def run_stage1(
     academic_program_filter: str = "ALL",
     similarity_threshold: float = 0.6,
 ) -> Tuple[Optional[int], List[Dict]]:
-    """Compute Stage 1 matches and persist the comparison history."""
     docs = _load_documents(academic_program_filter)
-
     if not docs:
         return None, []
 
@@ -104,12 +96,13 @@ def run_stage1(
                 }
             )
 
-    matches.sort(key=lambda m: m["similarity"], reverse=True)
+    matches.sort(key=lambda item: item["similarity"], reverse=True)
 
-    top_matches_str = ",".join(
-        f"{m['document_id']}|{m['similarity']:.4f}" for m in matches
-    ) if matches else ""
-
+    top_matches_str = (
+        ",".join(f"{m['document_id']}|{m['similarity']:.4f}" for m in matches)
+        if matches
+        else ""
+    )
     keywords_json = json.dumps(keywords, ensure_ascii=False)
 
     with db_cursor(commit=True) as cursor:
@@ -136,19 +129,16 @@ def run_stage1(
 
 
 def run_stage2(keywords, stage1_matches, abstracts, show_heatmap=True):
-    """Compatibility helper for Stage 2 matrix/figure generation."""
     if not keywords or not stage1_matches or not abstracts:
         return None, None
 
     model = get_model()
     kw_embs = model.encode(keywords, convert_to_tensor=True)
     abs_embs = model.encode(abstracts, convert_to_tensor=True)
-
     sims = util.cos_sim(kw_embs, abs_embs).cpu().numpy()
 
-    col_names = [f"{m[1]} (ID:{m[0]})" for m in stage1_matches]
+    col_names = [f"{item[1]} (ID:{item[0]})" for item in stage1_matches]
     matrix = pd.DataFrame(sims, index=keywords, columns=col_names)
-
     if not show_heatmap:
         return None, matrix
 
@@ -161,13 +151,13 @@ def run_stage2(keywords, stage1_matches, abstracts, show_heatmap=True):
     ax.set_yticks(range(len(keywords)))
     ax.set_yticklabels(keywords, fontsize=8)
 
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            val = matrix.iat[i, j]
+    for row_index in range(matrix.shape[0]):
+        for col_index in range(matrix.shape[1]):
+            val = matrix.iat[row_index, col_index]
             ax.text(
-                j,
-                i,
-                f"{val*100:.1f}%",
+                col_index,
+                row_index,
+                f"{val * 100:.1f}%",
                 ha="center",
                 va="center",
                 color="white" if val > 0.5 else "black",
@@ -180,9 +170,8 @@ def run_stage2(keywords, stage1_matches, abstracts, show_heatmap=True):
 
 
 def get_history_with_matches(history_id):
-    """Load one history row and reconstruct Stage 1 matches from top_matches."""
-    with db_cursor() as cur:
-        cur.execute(
+    with db_cursor() as cursor:
+        cursor.execute(
             """
             SELECT
                 ch.*,
@@ -193,19 +182,18 @@ def get_history_with_matches(history_id):
             """,
             (history_id,),
         )
-        history = cur.fetchone()
+        history = cursor.fetchone()
         if not history:
             return None, []
 
         doc_pairs = _parse_top_matches(history.get("top_matches") or "")
-
         if not doc_pairs:
             history["keywords_list"] = parse_keywords(history.get("keywords"))
             return history, []
 
-        doc_ids = [dp[0] for dp in doc_pairs]
+        doc_ids = [pair[0] for pair in doc_pairs]
         placeholders = ", ".join(["%s"] * len(doc_ids))
-        cur.execute(
+        cursor.execute(
             f"""
             SELECT document_id, title, academic_program
             FROM documents
@@ -213,37 +201,32 @@ def get_history_with_matches(history_id):
             """,
             tuple(doc_ids),
         )
-        docs = cur.fetchall()
+        docs = cursor.fetchall()
 
-        docs_by_id = {row["document_id"]: row for row in docs}
+    docs_by_id = {row["document_id"]: row for row in docs}
+    matches = []
+    for doc_id, similarity in doc_pairs:
+        doc = docs_by_id.get(doc_id)
+        if not doc:
+            continue
+        matches.append(
+            {
+                "document_id": doc["document_id"],
+                "title": doc["title"],
+                "program": doc.get("academic_program") or "",
+                "similarity": similarity,
+            }
+        )
 
-        matches = []
-        for doc_id, sim in doc_pairs:
-            d = docs_by_id.get(doc_id)
-            if not d:
-                continue
-            matches.append(
-                {
-                    "document_id": d["document_id"],
-                    "title": d["title"],
-                    "program": d.get("academic_program") or "",
-                    "similarity": sim,
-                }
-            )
-
-        history["keywords_list"] = parse_keywords(history.get("keywords"))
-        return history, matches
+    history["keywords_list"] = parse_keywords(history.get("keywords"))
+    return history, matches
 
 
-# -----------------------------
-# Stage 2: Keyword vs Abstract matrix
-# -----------------------------
 def build_stage2_matrix(keywords: List[str], matches: List[Dict]) -> Optional[pd.DataFrame]:
-    """Build keyword x document similarity matrix (pandas DataFrame)."""
     if not keywords or not matches:
         return None
 
-    doc_ids = [m["document_id"] for m in matches]
+    doc_ids = [item["document_id"] for item in matches]
     placeholders = ",".join(["%s"] * len(doc_ids))
 
     with db_cursor() as cursor:
@@ -257,21 +240,19 @@ def build_stage2_matrix(keywords: List[str], matches: List[Dict]) -> Optional[pd
         )
         docs = cursor.fetchall()
 
-    abs_by_id = {d["document_id"]: d["abstract"] for d in docs}
-    abstracts = [abs_by_id.get(did, "") for did in doc_ids]
+    abs_by_id = {row["document_id"]: row["abstract"] for row in docs}
+    abstracts = [abs_by_id.get(doc_id, "") for doc_id in doc_ids]
 
     model = get_model()
     kw_embs = model.encode(keywords, convert_to_tensor=True)
     abs_embs = model.encode(abstracts, convert_to_tensor=True)
-
     sims = util.cos_sim(kw_embs, abs_embs).cpu().numpy()
 
-    col_names = [f"{m['title']} (ID:{m['document_id']})" for m in matches]
+    col_names = [f"{item['title']} (ID:{item['document_id']})" for item in matches]
     return pd.DataFrame(sims, index=keywords, columns=col_names)
 
 
 def build_heatmap_figure(matrix: pd.DataFrame) -> Figure:
-    """Turn the Stage 2 matrix into a Matplotlib heatmap Figure."""
     n_rows, n_cols = matrix.shape
     fig = Figure(figsize=(max(6, 1.2 * n_cols), max(4, 0.7 * n_rows)), dpi=100)
     ax = fig.add_subplot(111)
@@ -283,12 +264,12 @@ def build_heatmap_figure(matrix: pd.DataFrame) -> Figure:
     ax.set_xticklabels(matrix.columns, rotation=45, ha="right", fontsize=8)
     ax.set_yticklabels(matrix.index, fontsize=9)
 
-    for i in range(n_rows):
-        for j in range(n_cols):
-            val = matrix.iat[i, j]
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            val = matrix.iat[row_index, col_index]
             ax.text(
-                j,
-                i,
+                col_index,
+                row_index,
                 f"{val * 100:.1f}%",
                 ha="center",
                 va="center",
@@ -303,7 +284,6 @@ def build_heatmap_figure(matrix: pd.DataFrame) -> Figure:
 
 
 def build_heatmap_for_history(history_id: int) -> Optional[Figure]:
-    """Convenience helper for generating history heatmap figures."""
     history, matches = get_history_with_matches(history_id)
     if not history or not matches:
         return None
