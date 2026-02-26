@@ -21,6 +21,9 @@ SET row_security = off;
 -- Name: matrixmatch; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
+-- Reset schema so this import script can be re-run without duplicate object errors.
+DROP SCHEMA IF EXISTS matrixmatch CASCADE;
+
 CREATE SCHEMA IF NOT EXISTS matrixmatch;
 
 
@@ -347,5 +350,4 @@ ALTER TABLE ONLY matrixmatch.comparison_history
 --
 -- PostgreSQL database dump complete
 --
-
 
