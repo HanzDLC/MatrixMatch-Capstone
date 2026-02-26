@@ -103,7 +103,7 @@ def _load_documents(program_filter: str) -> List[Dict]:
             cursor.execute(
                 """
                 SELECT document_id, title, academic_program, abstract
-                FROM documents
+                FROM matrixmatch.documents
                 WHERE academic_program = %s
                 """,
                 (program_filter,),
@@ -112,7 +112,7 @@ def _load_documents(program_filter: str) -> List[Dict]:
             cursor.execute(
                 """
                 SELECT document_id, title, academic_program, abstract
-                FROM documents
+                FROM matrixmatch.documents
                 """
             )
         return cursor.fetchall()
@@ -127,7 +127,7 @@ def _load_document_abstracts(doc_ids: List[int]) -> Dict[int, str]:
         cursor.execute(
             f"""
             SELECT document_id, abstract
-            FROM documents
+            FROM matrixmatch.documents
             WHERE document_id IN ({placeholders})
             """,
             tuple(doc_ids),
@@ -292,7 +292,7 @@ def run_stage1(
     with db_cursor(commit=True) as cursor:
         cursor.execute(
             """
-            INSERT INTO comparison_history
+            INSERT INTO matrixmatch.comparison_history
             (researcher_id, keywords, user_abstract,
              academic_program_filter, similarity_threshold, top_matches)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -359,9 +359,9 @@ def get_history_with_matches(history_id):
             """
             SELECT
                 ch.*,
-                CONCAT(u.first_name, ' ', u.last_name) AS researcher_name
-            FROM comparison_history ch
-            JOIN "user" u ON ch.researcher_id = u.researcher_id
+                u.first_name || ' ' || u.last_name AS researcher_name
+            FROM matrixmatch.comparison_history ch
+            JOIN matrixmatch."user" u ON ch.researcher_id = u.researcher_id
             WHERE ch.history_id = %s
             """,
             (history_id,),
@@ -380,7 +380,7 @@ def get_history_with_matches(history_id):
         cursor.execute(
             f"""
             SELECT document_id, title, academic_program, abstract
-            FROM documents
+            FROM matrixmatch.documents
             WHERE document_id IN ({placeholders})
             """,
             tuple(doc_ids),

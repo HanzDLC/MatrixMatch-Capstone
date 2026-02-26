@@ -8,7 +8,7 @@ def get_user_by_credentials(email: str, password: str):
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email, role
-            FROM "user"
+            FROM matrixmatch."user"
             WHERE email = %s AND password = %s
             """,
             (email, password),
@@ -19,7 +19,7 @@ def get_user_by_credentials(email: str, password: str):
 def get_user_by_email(email: str):
     with db_cursor() as cursor:
         cursor.execute(
-            'SELECT researcher_id, first_name, last_name, email, role FROM "user" WHERE email = %s',
+            'SELECT researcher_id, first_name, last_name, email, role FROM matrixmatch."user" WHERE email = %s',
             (email,),
         )
         return cursor.fetchone()
@@ -34,7 +34,7 @@ def create_researcher(
     with db_cursor(commit=True) as cursor:
         cursor.execute(
             """
-            INSERT INTO "user" (first_name, last_name, email, password, role)
+            INSERT INTO matrixmatch."user" (first_name, last_name, email, password, role)
             VALUES (%s, %s, %s, %s, 'Researcher')
             RETURNING researcher_id
             """,
@@ -49,7 +49,7 @@ def get_user_by_id(user_id: int):
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email, role
-            FROM "user"
+            FROM matrixmatch."user"
             WHERE researcher_id = %s
             """,
             (user_id,),
@@ -62,7 +62,7 @@ def get_researcher_by_id(researcher_id: int):
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email
-            FROM "user"
+            FROM matrixmatch."user"
             WHERE researcher_id = %s AND role = 'Researcher'
             """,
             (researcher_id,),
@@ -75,7 +75,7 @@ def list_researchers():
         cursor.execute(
             """
             SELECT researcher_id, first_name, last_name, email, registered_date
-            FROM "user"
+            FROM matrixmatch."user"
             WHERE role = 'Researcher'
             ORDER BY registered_date DESC
             """
@@ -86,11 +86,11 @@ def list_researchers():
 def delete_researcher_with_history(researcher_id: int) -> bool:
     with db_cursor(commit=True) as cursor:
         cursor.execute(
-            "DELETE FROM comparison_history WHERE researcher_id = %s",
+            "DELETE FROM matrixmatch.comparison_history WHERE researcher_id = %s",
             (researcher_id,),
         )
         cursor.execute(
-            'DELETE FROM "user" WHERE researcher_id = %s AND role = \'Researcher\'',
+            'DELETE FROM matrixmatch."user" WHERE researcher_id = %s AND role = \'Researcher\'',
             (researcher_id,),
         )
         return cursor.rowcount > 0
@@ -100,7 +100,7 @@ def update_user_password(researcher_id: int, new_password: str) -> None:
     with db_cursor(commit=True) as cursor:
         cursor.execute(
             """
-            UPDATE "user"
+            UPDATE matrixmatch."user"
             SET password = %s
             WHERE researcher_id = %s
             """,

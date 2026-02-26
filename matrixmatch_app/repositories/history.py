@@ -8,13 +8,13 @@ def get_admin_stats():
             SELECT
                 COALESCE(SUM(CASE WHEN role = 'Researcher' THEN 1 ELSE 0 END), 0) AS total_researchers,
                 COALESCE(SUM(CASE WHEN role = 'Admin' THEN 1 ELSE 0 END), 0) AS total_admins,
-                (SELECT COUNT(*) FROM comparison_history) AS total_comparisons,
+                (SELECT COUNT(*) FROM matrixmatch.comparison_history) AS total_comparisons,
                 (
                     SELECT COUNT(*)
-                    FROM comparison_history
+                    FROM matrixmatch.comparison_history
                     WHERE created_at >= NOW() - INTERVAL '7 days'
                 ) AS last_7_days_runs
-            FROM "user"
+            FROM matrixmatch."user"
             """
         )
         return cursor.fetchone()
@@ -25,12 +25,12 @@ def list_recent_history(limit: int = 10):
         cursor.execute(
             """
             SELECT ch.history_id,
-                   CONCAT(u.first_name, ' ', u.last_name) AS researcher_name,
+                   u.first_name || ' ' || u.last_name AS researcher_name,
                    ch.academic_program_filter,
                    ch.similarity_threshold,
                    ch.created_at
-            FROM comparison_history ch
-            JOIN "user" u ON ch.researcher_id = u.researcher_id
+            FROM matrixmatch.comparison_history ch
+            JOIN matrixmatch."user" u ON ch.researcher_id = u.researcher_id
             ORDER BY ch.created_at DESC
             LIMIT %s
             """,
@@ -48,7 +48,7 @@ def list_recent_history_for_user(researcher_id: int, limit: int = 5):
                    academic_program_filter,
                    similarity_threshold,
                    created_at
-            FROM comparison_history
+            FROM matrixmatch.comparison_history
             WHERE researcher_id = %s
             ORDER BY created_at DESC
             LIMIT %s
@@ -67,7 +67,7 @@ def list_history_for_user(researcher_id: int):
                    academic_program_filter,
                    similarity_threshold,
                    created_at
-            FROM comparison_history
+            FROM matrixmatch.comparison_history
             WHERE researcher_id = %s
             ORDER BY created_at DESC
             """,
@@ -92,7 +92,7 @@ def get_researcher_stats(researcher_id: int):
                     ),
                     0
                 ) AS last_7_days_runs
-            FROM comparison_history
+            FROM matrixmatch.comparison_history
             WHERE researcher_id = %s
             """,
             (researcher_id,),
