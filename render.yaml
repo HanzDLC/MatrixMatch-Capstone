@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: matrixmatch
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_HOST
+        value: aws-1-ap-southeast-2.pooler.supabase.com
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        value: "postgres.<your-project-ref>"
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: postgres
+      - key: DB_OPTIONS
+        value: "-c search_path=matrixmatch,public"
+      - key: DB_USE_POOL
+        value: "false"
+      - key: PGSSLMODE
+        value: require
