@@ -27,7 +27,7 @@ def _load_env_file():
 def get_db_config():
     """Build DB config from environment variables."""
     _load_env_file()
-    return {
+    config = {
         "host": os.getenv("DB_HOST", "localhost"),
         "port": int(os.getenv("DB_PORT", "5432")),
         "user": os.getenv("DB_USER", "postgres"),
@@ -35,6 +35,20 @@ def get_db_config():
         "dbname": os.getenv("DB_NAME", "matrixmatch"),
         "options": os.getenv("DB_OPTIONS", "-c search_path=matrixmatch,public"),
     }
+
+    # Supabase/Render require SSL for Postgres connections.
+    sslmode = os.getenv("PGSSLMODE", "").strip()
+    if sslmode:
+        config["sslmode"] = sslmode
+
+    connect_timeout = os.getenv("DB_CONNECT_TIMEOUT", "").strip()
+    if connect_timeout:
+        try:
+            config["connect_timeout"] = int(connect_timeout)
+        except ValueError:
+            pass
+
+    return config
 
 
 def get_secret_key():
