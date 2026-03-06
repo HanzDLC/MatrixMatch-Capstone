@@ -474,7 +474,8 @@ def register_routes(app):
 
         success, message = document_service.add_document(title, program, abstract, modified_by)
         if success:
-            flash(message, "success")
+            category = "warning" if "audit log" in message.lower() else "success"
+            flash(message, category)
             return redirect(url_for("manage_documents"))
         else:
             flash(message, "danger")
@@ -504,7 +505,8 @@ def register_routes(app):
 
         success, message = document_service.update_document(document_id, title, program, abstract, modified_by)
         if success:
-            flash(message, "success")
+            category = "warning" if "audit log" in message.lower() else "success"
+            flash(message, category)
             return redirect(url_for("manage_documents"))
         else:
             flash(message, "danger")

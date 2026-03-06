@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 import fitz  # PyMuPDF
 import docx
 
-from matrixmatch_app.db import db_cursor
 from matrixmatch_app.repositories import documents, document_logs
 
 logger = logging.getLogger(__name__)
@@ -16,6 +15,19 @@ logger = logging.getLogger(__name__)
 def _normalize_modified_by(modified_by: str) -> str:
     cleaned = " ".join((modified_by or "").split()).strip()
     return cleaned or "Unknown user"
+
+
+def _log_document_action(document_id: int, title: str, action: str, modified_by: str) -> bool:
+    try:
+        document_logs.add_log(document_id, title, action, modified_by)
+        return True
+    except Exception:
+        logger.exception(
+            "Document %s was %s, but creating the audit log failed.",
+            document_id,
+            action.lower(),
+        )
+        return False
 
 
 def list_all_documents() -> List[Dict]:
@@ -42,14 +54,17 @@ def add_document(title: str, program: str, abstract: str, modified_by: str) -> T
         return False, "A document with the exact same title or abstract already exists."
 
     try:
-        with db_cursor(commit=True) as cursor:
-            doc_id = documents.add_document(title, program, abstract, cursor=cursor)
-            if not doc_id:
-                return False, "Failed to add document."
-            document_logs.add_log(doc_id, title, "Added", modified_by, cursor=cursor)
+        doc_id = documents.add_document(title, program, abstract)
     except Exception:
-        logger.exception("Failed to add document and create its audit log.")
+        logger.exception("Failed to add document.")
         return False, "Failed to add document."
+
+    if not doc_id:
+        return False, "Failed to add document."
+
+    log_created = _log_document_action(doc_id, title, "Added", modified_by)
+    if not log_created:
+        return True, "Document added successfully, but the audit log could not be created."
 
     return True, "Document added successfully."
 
@@ -70,14 +85,17 @@ def update_document(document_id: int, title: str, program: str, abstract: str, m
         return False, "Another document with the exact same title or abstract already exists."
 
     try:
-        with db_cursor(commit=True) as cursor:
-            updated = documents.update_document(document_id, title, program, abstract, cursor=cursor)
-            if not updated:
-                return False, "Failed to update document or document not found."
-            document_logs.add_log(document_id, title, "Edited", modified_by, cursor=cursor)
+        updated = documents.update_document(document_id, title, program, abstract)
     except Exception:
-        logger.exception("Failed to update document %s and create its audit log.", document_id)
+        logger.exception("Failed to update document %s.", document_id)
         return False, "Failed to update document."
+
+    if not updated:
+        return False, "Failed to update document or document not found."
+
+    log_created = _log_document_action(document_id, title, "Edited", modified_by)
+    if not log_created:
+        return True, "Document updated successfully, but the audit log could not be created."
 
     return True, "Document updated successfully."
 
@@ -90,15 +108,15 @@ def delete_document(document_id: int, modified_by: str) -> bool:
     modified_by = _normalize_modified_by(modified_by)
 
     try:
-        with db_cursor(commit=True) as cursor:
-            deleted = documents.delete_document(document_id, cursor=cursor)
-            if not deleted:
-                return False
-            document_logs.add_log(document_id, title, "Deleted", modified_by, cursor=cursor)
+        deleted = documents.delete_document(document_id)
     except Exception:
-        logger.exception("Failed to delete document %s and create its audit log.", document_id)
+        logger.exception("Failed to delete document %s.", document_id)
         return False
 
+    if not deleted:
+        return False
+
+    _log_document_action(document_id, title, "Deleted", modified_by)
     return True
 
 
