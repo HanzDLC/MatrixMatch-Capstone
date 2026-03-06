@@ -14,6 +14,16 @@ function stripApiPrefix(pathname) {
     return stripped || "/";
 }
 
+function getForwardedPathname(incomingUrl) {
+    const explicitPathname = incomingUrl.searchParams.get("__pathname");
+    if (explicitPathname) {
+        return explicitPathname.startsWith("/")
+            ? explicitPathname
+            : `/${explicitPathname}`;
+    }
+    return stripApiPrefix(incomingUrl.pathname);
+}
+
 function joinPath(basePath, requestPath) {
     const normalizedBase = (basePath || "/").replace(/\/+$/, "");
     const normalizedRequest = (requestPath || "/").replace(/^\/+/, "");
@@ -57,10 +67,14 @@ async function buildRequestInit(request) {
 function buildTargetUrl(request, baseUrl) {
     const incomingUrl = new URL(request.url);
     const targetUrl = new URL(baseUrl);
-    const forwardedPath = stripApiPrefix(incomingUrl.pathname);
+    const forwardedPath = getForwardedPathname(incomingUrl);
+    const targetSearchParams = new URLSearchParams(incomingUrl.search);
+
+    targetSearchParams.delete("__pathname");
 
     targetUrl.pathname = joinPath(targetUrl.pathname, forwardedPath);
-    targetUrl.search = incomingUrl.search;
+    const searchString = targetSearchParams.toString();
+    targetUrl.search = searchString ? `?${searchString}` : "";
 
     return targetUrl;
 }

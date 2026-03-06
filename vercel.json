@@ -6,11 +6,11 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/api"
+      "destination": "/api?__pathname=/"
     },
     {
       "source": "/:path*",
-      "destination": "/api/:path*"
+      "destination": "/api?__pathname=/:path*"
     }
   ]
 }

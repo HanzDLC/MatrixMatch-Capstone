@@ -22,13 +22,12 @@ If `BACKEND_PROXY_URL` is missing, the proxy currently falls back to the checked
 
 ## Project Layout
 
-The Vercel side now uses the simplest function layout:
+The Vercel side now uses a single proxy function layout:
 
 - `api/index.mjs` for `/`
-- `api/[...path].mjs` for every other route
 - `api/_proxy.mjs` for the shared proxy logic
 
-This avoids the previous optional catch-all route shape and keeps the deployment aligned with Vercel's current ESM function model.
+Every public route is rewritten to `api/index.mjs` with a forwarded `__pathname` query parameter. This avoids nested Vercel function matching issues while keeping the deployment aligned with Vercel's current ESM function model.
 
 ## Why Vercel Won't Install Python Packages
 
