@@ -150,6 +150,39 @@ ALTER SEQUENCE matrixmatch.user_researcher_id_seq OWNED BY matrixmatch."user".re
 
 
 --
+-- Name: documents_log; Type: TABLE; Schema: matrixmatch; Owner: postgres
+--
+
+CREATE TABLE matrixmatch.documents_log (
+    log_id bigint NOT NULL,
+    document_id bigint,
+    document_title character varying(500) NOT NULL,
+    action character varying(50) NOT NULL,
+    modified_by character varying(200) NOT NULL,
+    timestamp timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: documents_log_log_id_seq; Type: SEQUENCE; Schema: matrixmatch; Owner: postgres
+--
+
+CREATE SEQUENCE matrixmatch.documents_log_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: documents_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: matrixmatch; Owner: postgres
+--
+
+ALTER SEQUENCE matrixmatch.documents_log_log_id_seq OWNED BY matrixmatch.documents_log.log_id;
+
+
+--
 -- Name: comparison_history history_id; Type: DEFAULT; Schema: matrixmatch; Owner: postgres
 --
 
@@ -168,6 +201,13 @@ ALTER TABLE ONLY matrixmatch.documents ALTER COLUMN document_id SET DEFAULT next
 --
 
 ALTER TABLE ONLY matrixmatch."user" ALTER COLUMN researcher_id SET DEFAULT nextval('matrixmatch.user_researcher_id_seq'::regclass);
+
+
+--
+-- Name: documents_log log_id; Type: DEFAULT; Schema: matrixmatch; Owner: postgres
+--
+
+ALTER TABLE ONLY matrixmatch.documents_log ALTER COLUMN log_id SET DEFAULT nextval('matrixmatch.documents_log_log_id_seq'::regclass);
 
 
 --
@@ -302,11 +342,26 @@ SELECT pg_catalog.setval('matrixmatch.user_researcher_id_seq', 18, true);
 
 
 --
+-- Name: documents_log_log_id_seq; Type: SEQUENCE SET; Schema: matrixmatch; Owner: postgres
+--
+
+SELECT pg_catalog.setval('matrixmatch.documents_log_log_id_seq', 1, false);
+
+
+--
 -- Name: comparison_history idx_16392_primary; Type: CONSTRAINT; Schema: matrixmatch; Owner: postgres
 --
 
 ALTER TABLE ONLY matrixmatch.comparison_history
     ADD CONSTRAINT idx_16392_primary PRIMARY KEY (history_id);
+
+
+--
+-- Name: documents_log documents_log_pkey; Type: CONSTRAINT; Schema: matrixmatch; Owner: postgres
+--
+
+ALTER TABLE ONLY matrixmatch.documents_log
+    ADD CONSTRAINT documents_log_pkey PRIMARY KEY (log_id);
 
 
 --
