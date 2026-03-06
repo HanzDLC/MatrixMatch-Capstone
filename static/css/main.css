@@ -2587,6 +2587,7 @@ body[data-theme="dark"] .landing-hero {
 
     .table--stacked td[data-label="Actions"] {
         grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
     }
 
     .table--stacked td[data-label="Actions"]::before {
@@ -2600,6 +2601,8 @@ body[data-theme="dark"] .landing-hero {
         width: 100%;
         align-items: stretch;
         justify-items: stretch;
+        max-width: 360px;
+        margin: 0 auto;
     }
 
     .table--stacked .actions-group > * {
@@ -2719,6 +2722,7 @@ body[data-theme="dark"] .landing-hero {
     .table--stacked .actions-group {
         gap: 7px;
         grid-template-columns: minmax(0, 1fr);
+        max-width: 280px;
     }
 
     .table--stacked .actions-group .btn {
