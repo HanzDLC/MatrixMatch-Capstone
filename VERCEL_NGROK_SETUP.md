@@ -18,6 +18,8 @@ This project is still a server-rendered Flask app, so Vercel is configured here 
    `https://example.ngrok-free.app`
 4. Deploy.
 
+If `BACKEND_PROXY_URL` is missing, the proxy currently falls back to the checked-in ngrok URL that was active when this file was last updated. That is only a temporary convenience for demos. Once your ngrok URL changes, set `BACKEND_PROXY_URL` in Vercel and redeploy.
+
 ## Project Layout
 
 The Vercel side now uses the simplest function layout:

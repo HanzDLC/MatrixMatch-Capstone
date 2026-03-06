@@ -1,3 +1,5 @@
+const DEFAULT_BACKEND_PROXY_URL = "https://guidebooky-gideon-pellucid.ngrok-free.dev";
+
 function normalizeBaseUrl(rawUrl) {
     if (!rawUrl) {
         return null;
@@ -73,10 +75,14 @@ function jsonResponse(status, payload) {
 }
 
 export async function proxyRequest(request) {
-    const baseUrl = normalizeBaseUrl(process.env.BACKEND_PROXY_URL);
+    const baseUrl = normalizeBaseUrl(
+        process.env.BACKEND_PROXY_URL ||
+        process.env.BACKEND_URL ||
+        DEFAULT_BACKEND_PROXY_URL
+    );
     if (!baseUrl) {
         return jsonResponse(500, {
-            error: "BACKEND_PROXY_URL is not configured in Vercel.",
+            error: "No backend proxy URL is configured.",
         });
     }
 
