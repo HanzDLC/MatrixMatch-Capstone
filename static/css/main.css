@@ -2369,6 +2369,21 @@ body[data-theme="dark"] .landing-hero {
         display: none;
     }
 
+    .topbar__right {
+        gap: 8px;
+    }
+
+    .icon-button,
+    .topbar__link {
+        padding: 7px 12px;
+        font-size: 0.82rem;
+    }
+
+    .theme-toggle,
+    .topbar__link {
+        min-width: 0;
+    }
+
     .page,
     .page-shell {
         gap: 14px;
@@ -2412,7 +2427,7 @@ body[data-theme="dark"] .landing-hero {
 
     .table--stacked tbody tr {
         border: 1px solid var(--border-main);
-        border-radius: var(--radius-md);
+        border-radius: 18px;
         background: var(--bg-card-strong);
         box-shadow: var(--shadow-soft);
         overflow: hidden;
@@ -2425,6 +2440,7 @@ body[data-theme="dark"] .landing-hero {
     .table--stacked td {
         border-bottom: 1px solid var(--border-main);
         padding: 10px 14px;
+        line-height: 1.45;
     }
 
     .table--stacked td:last-child {
@@ -2460,6 +2476,20 @@ body[data-theme="dark"] .landing-hero {
         margin-bottom: 8px;
     }
 
+    .table--stacked .actions-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .table--stacked .actions-group > * {
+        min-width: 0;
+    }
+
+    .table--stacked .actions-group .btn {
+        min-height: 42px;
+    }
+
     .table--stacked .truncate-cell {
         max-width: none;
         white-space: normal;
@@ -2479,5 +2509,89 @@ body[data-theme="dark"] .landing-hero {
     .landing-nav a,
     .landing-hero__actions .btn {
         width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .topbar {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .topbar__brand {
+        font-size: 1.05rem;
+        gap: 8px;
+    }
+
+    .topbar__brand::before {
+        width: 9px;
+        height: 9px;
+    }
+
+    .topbar__menu-btn,
+    .theme-toggle,
+    .topbar__link {
+        padding: 7px 11px;
+        font-size: 0.78rem;
+    }
+
+    .page-title,
+    .page__title {
+        font-size: 1.35rem;
+    }
+
+    .page-subtitle,
+    .page__subtitle {
+        font-size: 0.86rem;
+    }
+
+    .table-actions > *,
+    .card-head-actions > * {
+        flex: 1 1 100%;
+    }
+
+    .table--stacked td[data-label] {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+    }
+
+    .table--stacked td[data-label]::before {
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+    }
+
+    .table--stacked td {
+        padding: 11px 12px;
+    }
+
+    .table--stacked td[data-label="Actions"]::before {
+        margin-bottom: 6px;
+    }
+
+    .table--stacked .actions-group {
+        gap: 7px;
+    }
+
+    .table--stacked .actions-group .btn {
+        min-height: 40px;
+        padding: 8px 10px;
+        font-size: 0.78rem;
+        border-radius: 12px;
+    }
+
+    .table--stacked .sidebar__avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.92rem;
+    }
+
+    .inline-cluster {
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.35em 0.65em !important;
+        margin-left: 4px !important;
     }
 }
