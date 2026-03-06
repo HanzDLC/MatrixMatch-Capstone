@@ -1,12 +1,21 @@
 import json
 import os
 import io
+import logging
 from typing import Dict, List, Optional, Tuple
 
 import fitz  # PyMuPDF
 import docx
 
+from matrixmatch_app.db import db_cursor
 from matrixmatch_app.repositories import documents, document_logs
+
+logger = logging.getLogger(__name__)
+
+
+def _normalize_modified_by(modified_by: str) -> str:
+    cleaned = " ".join((modified_by or "").split()).strip()
+    return cleaned or "Unknown user"
 
 
 def list_all_documents() -> List[Dict]:
@@ -21,6 +30,7 @@ def add_document(title: str, program: str, abstract: str, modified_by: str) -> T
     title = (title or "").strip()
     program = (program or "").strip()
     abstract = (abstract or "").strip()
+    modified_by = _normalize_modified_by(modified_by)
 
     if not title:
         return False, "Title is required."
@@ -30,18 +40,25 @@ def add_document(title: str, program: str, abstract: str, modified_by: str) -> T
         
     if documents.check_duplicate_document(title, abstract):
         return False, "A document with the exact same title or abstract already exists."
-        
-    doc_id = documents.add_document(title, program, abstract)
-    if doc_id:
-        document_logs.add_log(doc_id, title, "Added", modified_by)
-        return True, "Document added successfully."
-    return False, "Failed to add document."
+
+    try:
+        with db_cursor(commit=True) as cursor:
+            doc_id = documents.add_document(title, program, abstract, cursor=cursor)
+            if not doc_id:
+                return False, "Failed to add document."
+            document_logs.add_log(doc_id, title, "Added", modified_by, cursor=cursor)
+    except Exception:
+        logger.exception("Failed to add document and create its audit log.")
+        return False, "Failed to add document."
+
+    return True, "Document added successfully."
 
 
 def update_document(document_id: int, title: str, program: str, abstract: str, modified_by: str) -> Tuple[bool, str]:
     title = (title or "").strip()
     program = (program or "").strip()
     abstract = (abstract or "").strip()
+    modified_by = _normalize_modified_by(modified_by)
 
     if not title:
         return False, "Title is required."
@@ -51,12 +68,18 @@ def update_document(document_id: int, title: str, program: str, abstract: str, m
         
     if documents.check_duplicate_document(title, abstract, exclude_id=document_id):
         return False, "Another document with the exact same title or abstract already exists."
-        
-    updated = documents.update_document(document_id, title, program, abstract)
-    if updated:
-        document_logs.add_log(document_id, title, "Edited", modified_by)
-        return True, "Document updated successfully."
-    return False, "Failed to update document or document not found."
+
+    try:
+        with db_cursor(commit=True) as cursor:
+            updated = documents.update_document(document_id, title, program, abstract, cursor=cursor)
+            if not updated:
+                return False, "Failed to update document or document not found."
+            document_logs.add_log(document_id, title, "Edited", modified_by, cursor=cursor)
+    except Exception:
+        logger.exception("Failed to update document %s and create its audit log.", document_id)
+        return False, "Failed to update document."
+
+    return True, "Document updated successfully."
 
 
 def delete_document(document_id: int, modified_by: str) -> bool:
@@ -64,12 +87,19 @@ def delete_document(document_id: int, modified_by: str) -> bool:
     if not doc:
         return False
     title = doc.get("title", f"Document #{document_id}")
-    
-    deleted = documents.delete_document(document_id)
-    if deleted:
-        document_logs.add_log(document_id, title, "Deleted", modified_by)
-        return True
-    return False
+    modified_by = _normalize_modified_by(modified_by)
+
+    try:
+        with db_cursor(commit=True) as cursor:
+            deleted = documents.delete_document(document_id, cursor=cursor)
+            if not deleted:
+                return False
+            document_logs.add_log(document_id, title, "Deleted", modified_by, cursor=cursor)
+    except Exception:
+        logger.exception("Failed to delete document %s and create its audit log.", document_id)
+        return False
+
+    return True
 
 
 def extract_document_info(file_data: bytes, filename: str) -> Tuple[bool, str, Dict[str, str]]:
