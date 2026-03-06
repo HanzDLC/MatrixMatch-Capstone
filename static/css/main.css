@@ -2605,6 +2605,11 @@ body[data-theme="dark"] .landing-hero {
         margin: 0 auto;
     }
 
+    .table--stacked .actions-group--document {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 240px;
+    }
+
     .table--stacked .actions-group > * {
         min-width: 0;
         width: 100%;
@@ -2723,6 +2728,10 @@ body[data-theme="dark"] .landing-hero {
         gap: 7px;
         grid-template-columns: minmax(0, 1fr);
         max-width: 280px;
+    }
+
+    .table--stacked .actions-group--document {
+        max-width: 220px;
     }
 
     .table--stacked .actions-group .btn {
