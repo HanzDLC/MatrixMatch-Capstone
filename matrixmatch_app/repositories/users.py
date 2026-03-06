@@ -74,9 +74,8 @@ def list_researchers():
     with db_cursor() as cursor:
         cursor.execute(
             """
-            SELECT researcher_id, first_name, last_name, email, registered_date
+            SELECT researcher_id, first_name, last_name, email, role, registered_date
             FROM matrixmatch."user"
-            WHERE role = 'Researcher'
             ORDER BY registered_date DESC
             """
         )
@@ -127,5 +126,20 @@ def promote_researcher_to_admin(researcher_id: int) -> bool:
             WHERE researcher_id = %s AND role = 'Researcher'
             """,
             (researcher_id,),
+        )
+        return cursor.rowcount > 0
+
+
+def demote_admin_to_researcher(researcher_id: int, protected_email: str) -> bool:
+    with db_cursor(commit=True) as cursor:
+        cursor.execute(
+            """
+            UPDATE matrixmatch."user"
+            SET role = 'Researcher'
+            WHERE researcher_id = %s
+              AND role = 'Admin'
+              AND LOWER(email) <> LOWER(%s)
+            """,
+            (researcher_id, protected_email),
         )
         return cursor.rowcount > 0

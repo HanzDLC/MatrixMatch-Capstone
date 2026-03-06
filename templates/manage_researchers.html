@@ -7,7 +7,7 @@
         <div>
             <h1 class="page-title">Manage Researchers</h1>
             <p class="page-subtitle">
-                View researchers, track activity trend, and perform account actions.
+                View researcher and admin accounts, track activity trend, and perform account actions.
             </p>
         </div>
         <div class="table-actions">
@@ -21,7 +21,7 @@
             <div class="activity-chart__head">
                 <div>
                     <h2 class="activity-chart__title">Platform Activity</h2>
-                    <p class="activity-chart__hint">Registrations trend based on current researcher records.</p>
+                    <p class="activity-chart__hint">Registrations trend based on current account records.</p>
                 </div>
                 <span class="btn btn-secondary btn-sm">Last 7 Days</span>
             </div>
@@ -41,9 +41,9 @@
                 <p class="admin-stat-card__trend">Current active researcher accounts.</p>
             </article>
             <article class="admin-stat-card">
-                <p class="admin-stat-card__label">Active Comparisons</p>
-                <p class="admin-stat-card__value">{{ stats.get('total_comparisons', 0) }}</p>
-                <p class="admin-stat-card__trend">Total comparison runs recorded.</p>
+                <p class="admin-stat-card__label">Total Admins</p>
+                <p class="admin-stat-card__value">{{ stats.get('total_admins', 0) }}</p>
+                <p class="admin-stat-card__trend">Administrator accounts with system-wide access.</p>
             </article>
         </aside>
     </section>
@@ -51,8 +51,8 @@
     <section class="card">
         <div class="card__header">
             <div>
-                <h2 class="card__title">Researchers</h2>
-                <p class="card__subtitle">Search and manage researcher accounts.</p>
+                <h2 class="card__title">Accounts</h2>
+                <p class="card__subtitle">Search and manage researcher and admin accounts.</p>
             </div>
 
         </div>
@@ -65,12 +65,15 @@
                         <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
+                        <th>Role</th>
                         <th>Registered</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in researchers %}
+                    {% set is_admin = r.role == 'Admin' %}
+                    {% set is_protected_admin = is_admin and (r.email|lower == protected_admin_email) %}
                     <tr data-registered="{{ r.registered_date.strftime('%Y-%m-%d') if r.registered_date else '' }}">
                         <td>{{ r.researcher_id }}</td>
                         <td>
@@ -82,6 +85,13 @@
                             </div>
                         </td>
                         <td>{{ r.email }}</td>
+                        <td>
+                            {% if is_admin %}
+                            <span class="status-pill status-pill--success">Admin</span>
+                            {% else %}
+                            <span class="status-pill status-pill--pending">Researcher</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if r.registered_date %}
                             {{ r.registered_date.strftime('%Y-%m-%d %H:%M:%S') }}
@@ -99,9 +109,11 @@
                                     class="btn btn-ghost btn-xxs">
                                     History
                                 </a>
+                                {% if not is_admin %}
                                 <form method="post"
                                     action="{{ url_for('admin_promote_researcher', researcher_id=r.researcher_id) }}"
                                     class="inline-form js-promote-researcher-form"
+                                    data-account-name="{{ r.first_name }} {{ r.last_name }}"
                                     data-confirm="Are you sure you want to promote this researcher to Admin?">
                                     <button type="submit" class="btn btn-primary btn-xxs">Promote</button>
                                 </form>
@@ -111,6 +123,23 @@
                                     data-confirm="Delete this researcher and all comparison history for this account?">
                                     <button type="submit" class="btn btn-danger btn-xxs">Delete</button>
                                 </form>
+                                {% elif is_protected_admin %}
+                                <span
+                                    class="btn btn-secondary btn-xxs"
+                                    aria-disabled="true"
+                                    title="{{ protected_admin_email }} cannot be demoted."
+                                >
+                                    Protected
+                                </span>
+                                {% else %}
+                                <form method="post"
+                                    action="{{ url_for('admin_demote_researcher', researcher_id=r.researcher_id) }}"
+                                    class="inline-form js-demote-admin-form"
+                                    data-account-name="{{ r.first_name }} {{ r.last_name }}"
+                                    data-confirm="Are you sure you want to demote this admin to Researcher?">
+                                    <button type="submit" class="btn btn-secondary btn-xxs">Demote</button>
+                                </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -142,41 +171,49 @@
             "order": [[0, "desc"]]
         });
 
-        $('.js-delete-researcher-form').on('submit', function (e) {
-            e.preventDefault();
-            const form = this;
-            Swal.fire({
-                title: 'Delete researcher?',
-                text: "Delete this researcher and all comparison history for this account?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            })
-        });
+        const bindAccountActionConfirm = (selector, configBuilder) => {
+            $(document).on('submit', selector, function (e) {
+                e.preventDefault();
+                const form = this;
+                const config = configBuilder(form);
 
-        $('.js-promote-researcher-form').on('submit', function (e) {
-            e.preventDefault();
-            const form = this;
-            Swal.fire({
-                title: 'Promote to Admin?',
-                text: "Are you sure you want to promote this researcher to Admin?",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, promote!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            })
-        });
+                Swal.fire(config).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        };
+
+        bindAccountActionConfirm('.js-delete-researcher-form', () => ({
+            title: 'Delete researcher?',
+            text: 'Delete this researcher and all comparison history for this account?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }));
+
+        bindAccountActionConfirm('.js-promote-researcher-form', (form) => ({
+            title: 'Promote to Admin?',
+            text: `Promote ${form.dataset.accountName || 'this researcher'} to Admin?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, promote!'
+        }));
+
+        bindAccountActionConfirm('.js-demote-admin-form', (form) => ({
+            title: 'Demote to Researcher?',
+            text: `Demote ${form.dataset.accountName || 'this admin'} to Researcher?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, demote'
+        }));
     });
 </script>
 {% endblock %}

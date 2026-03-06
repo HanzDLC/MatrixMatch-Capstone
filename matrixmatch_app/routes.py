@@ -5,7 +5,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from matrixmatch_app.auth import get_current_user, login_required, role_required
 from matrixmatch_app.parsers import parse_keywords
-from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo
+from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo, users as users_repo
 from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service, document_service
 
 logger = logging.getLogger(__name__)
@@ -401,6 +401,7 @@ def register_routes(app):
             "manage_researchers.html",
             user=get_current_user(),
             researchers=admin_service.list_researchers(),
+            protected_admin_email=admin_service.PROTECTED_ADMIN_EMAIL,
             stats=dashboard_data.get("stats", {}),
             recent_history=dashboard_data.get("recent_history", []),
         )
@@ -425,6 +426,18 @@ def register_routes(app):
             flash("Researcher not found or could not be promoted.", "warning")
         return redirect(url_for("manage_researchers"))
 
+    @app.route("/admin/researchers/<int:researcher_id>/demote", methods=["POST"])
+    @role_required("Admin")
+    def admin_demote_researcher(researcher_id):
+        demoted, outcome = admin_service.demote_admin(researcher_id)
+        flash(outcome[0], outcome[1])
+
+        if demoted and session.get("user_id") == researcher_id:
+            session["role"] = "Researcher"
+            return redirect(url_for("dashboard"))
+
+        return redirect(url_for("manage_researchers"))
+
     @app.route("/admin/researchers/<int:researcher_id>/history")
     @role_required("Admin")
     def admin_view_history(researcher_id):
@@ -443,9 +456,9 @@ def register_routes(app):
     @app.route("/admin/researchers/<int:researcher_id>/reset", methods=["GET", "POST"])
     @role_required("Admin")
     def admin_reset_password(researcher_id):
-        researcher = users_repo.get_researcher_by_id(researcher_id)
+        researcher = users_repo.get_user_by_id(researcher_id)
         if not researcher:
-            flash("Researcher not found.", "danger")
+            flash("User not found.", "danger")
             return redirect(url_for("manage_researchers"))
 
         if request.method == "GET":
