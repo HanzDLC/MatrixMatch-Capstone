@@ -61,9 +61,37 @@ def register_routes(app):
         flash("You have been logged out.", "info")
         return redirect(url_for("home"))
 
+    @app.route("/guest")
+    def guest_login():
+        session.clear()
+        session["is_guest"] = True
+        flash("You are browsing as a Guest. Comparisons will not be saved.", "info")
+        return redirect(url_for("dashboard"))
+
     @app.route("/dashboard")
     @login_required
     def dashboard():
+        if session.get("is_guest"):
+            user = get_current_user()
+            guest_history_dict = session.get("guest_history", {})
+            # Convert dict values to a list and sort by history_id desc (which is timestamp-based)
+            recent_history = sorted(
+                guest_history_dict.values(),
+                key=lambda x: x.get("history_id", 0),
+                reverse=True
+            )
+            
+            return render_template(
+                "dashboard_researcher.html",
+                user=user,
+                stats={
+                    "total_comparisons": len(recent_history),
+                    "avg_threshold_pct": round(sum(h["similarity_threshold"] for h in recent_history) * 100 / len(recent_history), 1) if recent_history else 0,
+                    "last_7_days_runs": len(recent_history) # All are recent in a session
+                },
+                recent_history=recent_history[:5],
+            )
+
         role = session.get("role", "")
         if role == "Admin":
             return redirect(url_for("admin_dashboard"))
@@ -76,6 +104,10 @@ def register_routes(app):
     @app.route("/profile", methods=["GET", "POST"])
     @login_required
     def profile():
+        if session.get("is_guest"):
+            flash("Guests cannot edit profiles. Please create an account.", "warning")
+            return redirect(url_for("dashboard"))
+
         user = get_current_user()
 
         if request.method == "GET":
@@ -137,6 +169,43 @@ def register_routes(app):
         if request.method == "GET":
             return render_template("comparison_new.html", user=user)
 
+        # --- Guest path: skip DB save ---
+        if session.get("is_guest"):
+            raw_keywords = (request.form.get("keywords", "") or "").strip()
+            user_abstract = (request.form.get("abstract", "") or "").strip()
+            program_filter = (request.form.get("program_filter", "ALL") or "ALL").strip() or "ALL"
+            threshold_str = request.form.get("threshold", "60")
+
+            if not raw_keywords or not user_abstract:
+                flash("Please enter both keywords and an abstract.", "danger")
+                return redirect(url_for("comparison_new"))
+
+            keywords = parse_keywords(raw_keywords)
+            if len(keywords) < 5:
+                flash("Please enter at least 5 keywords.", "danger")
+                return redirect(url_for("comparison_new"))
+
+            similarity_threshold = comparison_service.parse_threshold(threshold_str)
+
+            history_id, _matches, history_data = matcher.run_stage1_guest(
+                keywords=keywords,
+                user_abstract=user_abstract,
+                academic_program_filter=program_filter,
+                similarity_threshold=similarity_threshold,
+            )
+            if history_id is None:
+                flash("No documents found for the selected program.", "warning")
+                return redirect(url_for("comparison_new"))
+
+            # Store in session
+            guest_history = session.get("guest_history", {})
+            guest_history[str(history_id)] = history_data
+            session["guest_history"] = guest_history
+
+            flash("Stage 1 comparison completed (Guest mode — not saved).", "success")
+            return redirect(url_for("history_detail", history_id=history_id))
+
+        # --- Normal (logged-in) path ---
         history_id, _matches, error = comparison_service.run_new_comparison(
             researcher_id=user["id"],
             raw_keywords=request.form.get("keywords", ""),
@@ -155,6 +224,20 @@ def register_routes(app):
     @login_required
     def history():
         user = get_current_user()
+
+        if session.get("is_guest"):
+            guest_history_dict = session.get("guest_history", {})
+            history_rows = sorted(
+                guest_history_dict.values(),
+                key=lambda x: x.get("history_id", 0),
+                reverse=True
+            )
+            return render_template(
+                "history.html",
+                user=user,
+                history_rows=history_rows,
+            )
+
         history_rows = history_repo.list_history_for_user(user["id"])
 
         return render_template(
@@ -167,6 +250,65 @@ def register_routes(app):
     @login_required
     def history_detail(history_id):
         user = get_current_user()
+
+        # --- Guest path: read from session ---
+        if session.get("is_guest"):
+            guest_history = session.get("guest_history", {})
+            history_data = guest_history.get(str(history_id))
+            if not history_data:
+                flash("Guest history entry not found.", "warning")
+                return redirect(url_for("comparison_new"))
+
+            # Rebuild matches from top_matches string
+            history_entry = dict(history_data)
+            history_entry["keywords_list"] = parse_keywords(history_entry.get("keywords"))
+            keywords = history_entry["keywords_list"]
+
+            doc_pairs = matcher._parse_top_matches(history_entry.get("top_matches", ""))
+            matches = []
+            if doc_pairs:
+                from matrixmatch_app.db import db_cursor
+                doc_ids = [p[0] for p in doc_pairs]
+                placeholders = ", ".join(["%s"] * len(doc_ids))
+                with db_cursor() as cursor:
+                    cursor.execute(
+                        f"SELECT document_id, title, academic_program, abstract FROM matrixmatch.documents WHERE document_id IN ({placeholders})",
+                        tuple(doc_ids),
+                    )
+                    docs = cursor.fetchall()
+                docs_by_id = {row["document_id"]: row for row in docs}
+                for doc_id, similarity in doc_pairs:
+                    doc = docs_by_id.get(doc_id)
+                    if doc:
+                        matches.append({
+                            "document_id": doc["document_id"],
+                            "title": doc["title"],
+                            "program": doc.get("academic_program") or "",
+                            "similarity": similarity,
+                            "abstract": doc.get("abstract") or "",
+                        })
+
+            heatmap_data_uri = comparison_service.build_history_heatmap_data_uri(keywords, matches)
+            semantic_highlights = matcher.build_semantic_sentence_highlights(
+                user_abstract=history_entry.get("user_abstract", ""),
+                matches=matches,
+            )
+            table_data = None
+            if keywords and matches:
+                table_data = comparison_service.build_history_heatmap_table(keywords, matches)
+
+            return render_template(
+                "history_detail.html",
+                user=user,
+                history=history_entry,
+                matches=matches,
+                keywords=keywords,
+                heatmap_data_uri=heatmap_data_uri,
+                semantic_highlights=semantic_highlights,
+                table_data=table_data,
+            )
+
+        # --- Normal path ---
         history_entry, matches = matcher.get_history_with_matches(history_id)
         if not history_entry:
             flash("History entry not found.", "warning")

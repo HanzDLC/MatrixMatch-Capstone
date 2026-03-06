@@ -445,6 +445,44 @@ textarea:focus-visible {
     border-color: rgba(46, 144, 250, 0.35);
 }
 
+.guest-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(30, 166, 246, 0.08), rgba(15, 122, 229, 0.05));
+    border: 1px solid rgba(23, 117, 219, 0.18);
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+    color: var(--text-main);
+}
+
+.guest-banner__icon {
+    font-size: 1.4rem;
+    filter: drop-shadow(0 2px 4px rgba(30, 166, 246, 0.2));
+}
+
+.guest-banner__content {
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.guest-banner__content strong {
+    color: var(--accent-strong);
+}
+
+.guest-banner__content a {
+    color: var(--accent-strong);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.16s ease;
+}
+
+.guest-banner__content a:hover {
+    color: var(--text-brand);
+}
+
 .page,
 .page-shell {
     display: flex;

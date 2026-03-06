@@ -21,6 +21,7 @@
                 <a href="{{ url_for('home') }}">Home</a>
                 <a href="{{ url_for('login') }}">Login</a>
                 <a href="{{ url_for('register') }}">Register</a>
+                <a href="{{ url_for('guest_login') }}">Guest</a>
             </nav>
             <button type="button" id="themeToggle" class="icon-button theme-toggle"
                 aria-label="Toggle dark or light mode">
@@ -38,6 +39,7 @@
                 </p>
                 <div class="landing-hero__actions">
                     <a href="{{ url_for('register') }}" class="btn btn-primary">Create Account</a>
+                    <a href="{{ url_for('guest_login') }}" class="btn btn-outline">Enter as Guest</a>
                 </div>
             </div>
             <aside class="landing-hero__panel">
@@ -124,6 +126,7 @@
             <div class="landing-footer__links">
                 <a href="{{ url_for('login') }}">Login</a>
                 <a href="{{ url_for('register') }}">Register</a>
+                <a href="{{ url_for('guest_login') }}">Enter as Guest</a>
             </div>
         </footer>
     </div>

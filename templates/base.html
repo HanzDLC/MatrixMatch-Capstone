@@ -17,7 +17,8 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     {% block extra_head %}{% endblock %}
 </head>
-{% set is_authenticated = session and session.get('user_id') %}
+{% set is_authenticated = session and (session.get('user_id') or session.get('is_guest')) %}
+{% set is_guest = session and session.get('is_guest') %}
 {% set endpoint = request.endpoint or '' %}
 
 <body data-theme="light">
@@ -45,8 +46,13 @@
                 </button>
                 {% if is_authenticated %}
                 <span class="topbar__user">
+                    {% if is_guest %}
+                    Guest
+                    <span class="topbar__role">Guest</span>
+                    {% else %}
                     {{ session.get('first_name') }} {{ session.get('last_name') }}
                     <span class="topbar__role">{{ session.get('role') }}</span>
+                    {% endif %}
                 </span>
                 <a class="topbar__link" href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
@@ -69,6 +75,7 @@
                         class="sidebar__link{% if endpoint == 'comparison_new' %} is-active{% endif %}" data-icon="NC">
                         New Comparison
                     </a>
+                    {% if not is_guest %}
                     <a href="{{ url_for('history') }}"
                         class="sidebar__link{% if endpoint in ['history', 'history_detail', 'history_heatmap', 'admin_view_history'] %} is-active{% endif %}"
                         data-icon="VH">
@@ -78,6 +85,7 @@
                         class="sidebar__link{% if endpoint == 'profile' %} is-active{% endif %}" data-icon="MP">
                         My Profile
                     </a>
+                    {% endif %}
                 </div>
 
                 {% if session.get('role') == 'Admin' %}
@@ -115,6 +123,15 @@
             {% endif %}
 
             <main class="content">
+                {% if is_guest %}
+                <div class="guest-banner">
+                    <span class="guest-banner__icon">💡</span>
+                    <div class="guest-banner__content">
+                        <strong>Guest Mode:</strong> Your comparisons are only saved in this browser session.
+                        <a href="{{ url_for('register') }}">Create an account</a> to save your history permanently.
+                    </div>
+                </div>
+                {% endif %}
 
                 {% block content %}{% endblock %}
                 {% if is_authenticated %}

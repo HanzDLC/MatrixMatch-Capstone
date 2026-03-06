@@ -5,6 +5,14 @@ from flask import flash, redirect, session, url_for
 
 def get_current_user():
     """Return a dict-like object for the current logged-in user (from session)."""
+    if session.get("is_guest"):
+        return {
+            "id": None,
+            "first_name": "Guest",
+            "last_name": "",
+            "role": "Guest",
+            "email": "",
+        }
     if "user_id" not in session:
         return None
     return {
@@ -17,11 +25,11 @@ def get_current_user():
 
 
 def login_required(view_func):
-    """Decorator to require login for protected views."""
+    """Decorator to require login for protected views. Guests are allowed."""
 
     @wraps(view_func)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        if "user_id" not in session and not session.get("is_guest"):
             flash("Please log in to continue.", "warning")
             return redirect(url_for("login"))
         return view_func(*args, **kwargs)
@@ -35,11 +43,12 @@ def role_required(*allowed_roles):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped(*args, **kwargs):
-            if "user_id" not in session:
+            if "user_id" not in session and not session.get("is_guest"):
                 flash("Please log in to continue.", "warning")
                 return redirect(url_for("login"))
 
-            if session.get("role") not in allowed_roles:
+            current_role = session.get("role", "Guest") if not session.get("is_guest") else "Guest"
+            if current_role not in allowed_roles:
                 flash(f"{'/'.join(allowed_roles)} access only.", "danger")
                 return redirect(url_for("dashboard"))
 
@@ -48,3 +57,4 @@ def role_required(*allowed_roles):
         return wrapped
 
     return decorator
+

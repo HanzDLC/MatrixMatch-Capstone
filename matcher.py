@@ -312,6 +312,67 @@ def run_stage1(
     return history_id, matches
 
 
+def run_stage1_guest(
+    keywords: List[str],
+    user_abstract: str,
+    academic_program_filter: str = "ALL",
+    similarity_threshold: float = 0.6,
+) -> Tuple[Optional[int], List[Dict], Optional[Dict]]:
+    """Like run_stage1 but does NOT save to the database.
+
+    Returns (fake_history_id, matches, history_data_dict).
+    The history_data_dict can be stored in the Flask session.
+    """
+    import time
+
+    docs = _load_documents(academic_program_filter)
+    if not docs:
+        return None, [], None
+
+    model = get_model()
+    user_emb = model.encode(user_abstract, convert_to_tensor=True)
+    doc_embs = model.encode([d["abstract"] for d in docs], convert_to_tensor=True)
+
+    sims_tensor = util.cos_sim(user_emb, doc_embs)[0]
+    sims = sims_tensor.cpu().tolist()
+
+    matches: List[Dict] = []
+    for doc, sim_val in zip(docs, sims):
+        if sim_val >= similarity_threshold:
+            matches.append(
+                {
+                    "document_id": doc["document_id"],
+                    "title": doc["title"],
+                    "academic_program": doc["academic_program"],
+                    "similarity": float(sim_val),
+                }
+            )
+
+    matches.sort(key=lambda item: item["similarity"], reverse=True)
+
+    top_matches_str = (
+        ",".join(f"{m['document_id']}|{m['similarity']:.4f}" for m in matches)
+        if matches
+        else ""
+    )
+    keywords_json = json.dumps(keywords, ensure_ascii=False)
+
+    # Use a timestamp-based fake ID instead of a DB-generated one
+    fake_history_id = int(time.time() * 1000) % 2147483647
+
+    history_data = {
+        "history_id": fake_history_id,
+        "keywords": keywords_json,
+        "user_abstract": user_abstract,
+        "academic_program_filter": academic_program_filter,
+        "similarity_threshold": float(similarity_threshold),
+        "top_matches": top_matches_str,
+        "researcher_name": "Guest",
+    }
+
+    return fake_history_id, matches, history_data
+
+
 def run_stage2(keywords, stage1_matches, abstracts, show_heatmap=True):
     if not keywords or not stage1_matches or not abstracts:
         return None, None
