@@ -1875,6 +1875,65 @@ body[data-theme="dark"] .status-pill--danger {
     color: var(--accent-strong) !important;
 }
 
+.page-shell--logs .card__body--logs {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.page-shell--logs .dataTables_wrapper {
+    width: 100%;
+    display: grid;
+    gap: 12px;
+}
+
+.page-shell--logs .dataTables_wrapper .dataTables_length,
+.page-shell--logs .dataTables_wrapper .dataTables_filter {
+    margin-bottom: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border-main);
+    border-radius: 16px;
+    background: var(--bg-card);
+}
+
+.page-shell--logs .dataTables_wrapper .dataTables_length label,
+.page-shell--logs .dataTables_wrapper .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.page-shell--logs .dataTables_wrapper .dataTables_filter input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 0;
+}
+
+.page-shell--logs .dataTables_wrapper .dataTables_length select {
+    min-width: 84px;
+}
+
+.page-shell--logs .table-wrapper--logs {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.page-shell--logs .table--logs td[data-label="Action"] > * {
+    justify-self: start;
+}
+
+.page-shell--logs .table--logs .badge {
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.page-shell--logs .logs-title-cell {
+    max-width: 460px;
+}
+
 .auth-title {
     margin: 0;
     font-family: var(--font-display);
@@ -2662,6 +2721,45 @@ body[data-theme="dark"] .landing-hero {
         display: block;
     }
 
+    .page-shell--logs .table-actions--logs {
+        max-width: 360px;
+        margin: 0 auto;
+    }
+
+    .page-shell--logs .table-actions--logs > * {
+        flex: 1 1 100%;
+    }
+
+    .page-shell--logs .dataTables_wrapper .dataTables_length,
+    .page-shell--logs .dataTables_wrapper .dataTables_filter {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .page-shell--logs .dataTables_wrapper .dataTables_length label,
+    .page-shell--logs .dataTables_wrapper .dataTables_filter label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .page-shell--logs .dataTables_wrapper .dataTables_length select,
+    .page-shell--logs .dataTables_wrapper .dataTables_filter input {
+        width: 100%;
+    }
+
+    .page-shell--logs .table--logs tbody {
+        gap: 14px;
+    }
+
+    .page-shell--logs .table--logs tbody tr {
+        border-radius: 20px;
+    }
+
+    .page-shell--logs .table--logs td[data-label="Action"] > * {
+        justify-self: start;
+    }
+
     .landing-nav a,
     .landing-hero__actions .btn {
         width: 100%;
@@ -2764,6 +2862,10 @@ body[data-theme="dark"] .landing-hero {
 
     .heatmap-mobile-row__value {
         font-size: 0.76rem;
+    }
+
+    .page-shell--logs .table-actions--logs {
+        max-width: 280px;
     }
 
     .inline-cluster {

@@ -2,7 +2,7 @@
 {% block title %}Document Logs | MatrixMatch{% endblock %}
 
 {% block content %}
-<div class="page-shell">
+<div class="page-shell page-shell--logs">
     <div class="page-header">
         <div>
             <h1 class="page-title">Document Logs</h1>
@@ -10,20 +10,20 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card card--logs">
         <div class="card__header">
             <div>
                 <h2 class="card__title">Activity Logs</h2>
                 <p class="card__subtitle">All document addition, edit, and deletion events.</p>
             </div>
-            <div class="table-actions">
+            <div class="table-actions table-actions--logs">
                 <button id="filterLogsBtn" type="button" class="btn btn-secondary btn-sm">Filters</button>
                 <button id="sortLogsBtn" type="button" class="btn btn-secondary btn-sm">Sort</button>
             </div>
         </div>
-        <div class="card__body">
-            <div class="table-wrapper">
-                <table id="logsTable" class="table table--stacked">
+        <div class="card__body card__body--logs">
+            <div class="table-wrapper table-wrapper--logs">
+                <table id="logsTable" class="table table--stacked table--logs">
                     <thead>
                         <tr>
                             <th scope="col">Log ID</th>
@@ -52,7 +52,11 @@
                             <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '' }}</td>
                             <td>{{ log.modified_by }}</td>
                             <td>{{ log.document_id }}</td>
-                            <td>{{ log.document_title }}</td>
+                            <td>
+                                <div class="truncate-cell logs-title-cell" title="{{ log.document_title }}">
+                                    {{ log.document_title }}
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
