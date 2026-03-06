@@ -1,0 +1,6 @@
+{
+  "name": "matrixmatch-vercel-proxy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vercel reverse proxy for a locally hosted MatrixMatch backend over ngrok."
+}

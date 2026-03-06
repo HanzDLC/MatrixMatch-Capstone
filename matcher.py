@@ -1,17 +1,47 @@
+from __future__ import annotations
+
 # matcher.py
+from collections import Counter
 import html
 import json
+import logging
+import math
+import os
 import re
 from typing import Dict, List, Optional, Set, Tuple
 
-import pandas as pd
-from matplotlib.figure import Figure
-from sentence_transformers import SentenceTransformer, util
+try:
+    import pandas as pd
+except Exception as exc:
+    pd = None
+    _PANDAS_IMPORT_ERROR = exc
+else:
+    _PANDAS_IMPORT_ERROR = None
+
+try:
+    from matplotlib.figure import Figure
+except Exception as exc:
+    Figure = None
+    _MATPLOTLIB_IMPORT_ERROR = exc
+else:
+    _MATPLOTLIB_IMPORT_ERROR = None
+
+try:
+    from sentence_transformers import SentenceTransformer, util
+except Exception as exc:
+    SentenceTransformer = None
+    util = None
+    _SENTENCE_TRANSFORMER_IMPORT_ERROR = exc
+else:
+    _SENTENCE_TRANSFORMER_IMPORT_ERROR = None
 
 from matrixmatch_app.db import db_cursor
 from matrixmatch_app.parsers import parse_keywords
 
+logger = logging.getLogger(__name__)
 _model = None
+_model_failed = False
+_MODEL_NAME = os.getenv("SENTENCE_TRANSFORMER_MODEL", "all-MiniLM-L6-v2")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|[\r\n]+")
 _TOKEN_RE = re.compile(r"[A-Za-z0-9']+")
 _STOPWORDS = {
@@ -91,10 +121,102 @@ _STOPWORDS = {
 
 
 def get_model():
-    global _model
+    global _model, _model_failed
+    if _model_failed:
+        return None
+
     if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        if SentenceTransformer is None:
+            _model_failed = True
+            logger.warning(
+                "Sentence-transformers unavailable. Falling back to lexical similarity. %s",
+                _SENTENCE_TRANSFORMER_IMPORT_ERROR,
+            )
+            return None
+        try:
+            _model = SentenceTransformer(_MODEL_NAME)
+        except Exception:
+            _model_failed = True
+            logger.exception(
+                "Failed to load sentence-transformer model '%s'. Falling back to lexical similarity.",
+                _MODEL_NAME,
+            )
+            return None
     return _model
+
+
+def _text_to_counter(text: str) -> Counter:
+    return Counter(
+        token.lower()
+        for token in _TOKEN_RE.findall(text or "")
+        if len(token) > 2 and token.lower() not in _STOPWORDS
+    )
+
+
+def _counter_cosine_similarity(left: Counter, right: Counter) -> float:
+    if not left or not right:
+        return 0.0
+
+    dot_product = sum(freq * right.get(token, 0) for token, freq in left.items())
+    if not dot_product:
+        return 0.0
+
+    left_norm = math.sqrt(sum(freq * freq for freq in left.values()))
+    right_norm = math.sqrt(sum(freq * freq for freq in right.values()))
+    if not left_norm or not right_norm:
+        return 0.0
+
+    return dot_product / (left_norm * right_norm)
+
+
+def _lexical_similarity_matrix(source_texts: List[str], target_texts: List[str]) -> List[List[float]]:
+    if not source_texts or not target_texts:
+        return []
+
+    target_counters = [_text_to_counter(text) for text in target_texts]
+    matrix: List[List[float]] = []
+    for source_text in source_texts:
+        source_counter = _text_to_counter(source_text)
+        matrix.append(
+            [_counter_cosine_similarity(source_counter, target_counter) for target_counter in target_counters]
+        )
+    return matrix
+
+
+def _semantic_similarity_scores(query_text: str, candidate_texts: List[str]) -> List[float]:
+    if not candidate_texts:
+        return []
+
+    model = get_model()
+    if model is not None and util is not None:
+        try:
+            query_embedding = model.encode(query_text, convert_to_tensor=True)
+            candidate_embeddings = model.encode(candidate_texts, convert_to_tensor=True)
+            return [float(score) for score in util.cos_sim(query_embedding, candidate_embeddings)[0].cpu().tolist()]
+        except Exception:
+            logger.exception("Semantic stage 1 scoring failed. Falling back to lexical similarity.")
+
+    matrix = _lexical_similarity_matrix([query_text], candidate_texts)
+    return matrix[0] if matrix else []
+
+
+def _semantic_similarity_matrix(source_texts: List[str], target_texts: List[str]) -> List[List[float]]:
+    if not source_texts or not target_texts:
+        return []
+
+    model = get_model()
+    if model is not None and util is not None:
+        try:
+            source_embeddings = model.encode(source_texts, convert_to_tensor=True)
+            target_embeddings = model.encode(target_texts, convert_to_tensor=True)
+            return [
+                [float(score) for score in row]
+                for row in util.cos_sim(source_embeddings, target_embeddings).cpu().tolist()
+            ]
+        except Exception:
+            logger.exception("Semantic similarity matrix generation failed. Falling back to lexical similarity.")
+
+    return _lexical_similarity_matrix(source_texts, target_texts)
 
 
 def _load_documents(program_filter: str) -> List[Dict]:
@@ -261,12 +383,7 @@ def run_stage1(
     if not docs:
         return None, []
 
-    model = get_model()
-    user_emb = model.encode(user_abstract, convert_to_tensor=True)
-    doc_embs = model.encode([d["abstract"] for d in docs], convert_to_tensor=True)
-
-    sims_tensor = util.cos_sim(user_emb, doc_embs)[0]
-    sims = sims_tensor.cpu().tolist()
+    sims = _semantic_similarity_scores(user_abstract, [doc["abstract"] for doc in docs])
 
     matches: List[Dict] = []
     for doc, sim_val in zip(docs, sims):
@@ -329,12 +446,7 @@ def run_stage1_guest(
     if not docs:
         return None, [], None
 
-    model = get_model()
-    user_emb = model.encode(user_abstract, convert_to_tensor=True)
-    doc_embs = model.encode([d["abstract"] for d in docs], convert_to_tensor=True)
-
-    sims_tensor = util.cos_sim(user_emb, doc_embs)[0]
-    sims = sims_tensor.cpu().tolist()
+    sims = _semantic_similarity_scores(user_abstract, [doc["abstract"] for doc in docs])
 
     matches: List[Dict] = []
     for doc, sim_val in zip(docs, sims):
@@ -377,14 +489,19 @@ def run_stage2(keywords, stage1_matches, abstracts, show_heatmap=True):
     if not keywords or not stage1_matches or not abstracts:
         return None, None
 
-    model = get_model()
-    kw_embs = model.encode(keywords, convert_to_tensor=True)
-    abs_embs = model.encode(abstracts, convert_to_tensor=True)
-    sims = util.cos_sim(kw_embs, abs_embs).cpu().numpy()
+    if pd is None:
+        logger.warning("Pandas unavailable; cannot build stage 2 matrix. %s", _PANDAS_IMPORT_ERROR)
+        return None, None
+
+    sims = _semantic_similarity_matrix(keywords, abstracts)
 
     col_names = [f"{item[1]} (ID:{item[0]})" for item in stage1_matches]
     matrix = pd.DataFrame(sims, index=keywords, columns=col_names)
     if not show_heatmap:
+        return None, matrix
+
+    if Figure is None:
+        logger.warning("Matplotlib unavailable; cannot build heatmap figure. %s", _MATPLOTLIB_IMPORT_ERROR)
         return None, matrix
 
     fig = Figure(figsize=(1.2 * len(col_names), 0.5 * len(keywords)))
@@ -482,13 +599,13 @@ def build_semantic_sentence_highlights(
     if not user_sentences:
         return []
 
+    has_transformer_model = get_model() is not None
+    effective_min_similarity = min_similarity if has_transformer_model else 0.12
+
     selected_matches = matches[:max_docs]
     abstracts_by_doc = _resolve_match_abstracts(selected_matches)
     if not abstracts_by_doc:
         return []
-
-    model = get_model()
-    user_embeddings = model.encode(user_sentences, convert_to_tensor=True)
 
     highlights = []
     for match in selected_matches:
@@ -497,14 +614,18 @@ def build_semantic_sentence_highlights(
         if not doc_sentences:
             continue
 
-        doc_embeddings = model.encode(doc_sentences, convert_to_tensor=True)
-        similarity_matrix = util.cos_sim(user_embeddings, doc_embeddings).cpu().numpy()
+        similarity_matrix = _semantic_similarity_matrix(user_sentences, doc_sentences)
+        if not similarity_matrix:
+            continue
 
         candidates = []
         for user_idx in range(len(user_sentences)):
-            doc_idx = int(similarity_matrix[user_idx].argmax())
-            score = float(similarity_matrix[user_idx][doc_idx])
-            if score >= min_similarity:
+            row = similarity_matrix[user_idx]
+            if not row:
+                continue
+            doc_idx = max(range(len(row)), key=lambda idx: row[idx])
+            score = float(row[doc_idx])
+            if score >= effective_min_similarity:
                 candidates.append((score, user_idx, doc_idx))
         candidates.sort(key=lambda item: item[0], reverse=True)
 
@@ -586,20 +707,25 @@ def build_stage2_matrix(keywords: List[str], matches: List[Dict]) -> Optional[pd
     if not keywords or not matches:
         return None
 
+    if pd is None:
+        logger.warning("Pandas unavailable; cannot build stage 2 matrix. %s", _PANDAS_IMPORT_ERROR)
+        return None
+
     doc_ids = [item["document_id"] for item in matches]
     abstracts_by_doc = _resolve_match_abstracts(matches)
     abstracts = [abstracts_by_doc.get(doc_id, "") for doc_id in doc_ids]
 
-    model = get_model()
-    kw_embs = model.encode(keywords, convert_to_tensor=True)
-    abs_embs = model.encode(abstracts, convert_to_tensor=True)
-    sims = util.cos_sim(kw_embs, abs_embs).cpu().numpy()
+    sims = _semantic_similarity_matrix(keywords, abstracts)
 
     col_names = [f"{item['title']} (ID:{item['document_id']})" for item in matches]
     return pd.DataFrame(sims, index=keywords, columns=col_names)
 
 
 def build_heatmap_figure(matrix: pd.DataFrame) -> Figure:
+    if Figure is None:
+        logger.warning("Matplotlib unavailable; cannot build heatmap figure. %s", _MATPLOTLIB_IMPORT_ERROR)
+        return None
+
     n_rows, n_cols = matrix.shape
     fig = Figure(figsize=(max(6, 1.2 * n_cols), max(4, 0.7 * n_rows)), dpi=100)
     ax = fig.add_subplot(111)

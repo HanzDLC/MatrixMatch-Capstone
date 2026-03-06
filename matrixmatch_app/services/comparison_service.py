@@ -54,13 +54,17 @@ def run_new_comparison(
         logger.exception("Comparison requested without matcher dependencies.")
         return None, None, (str(exc), "danger")
 
-    history_id, matches = matcher.run_stage1(
-        researcher_id=researcher_id,
-        keywords=keywords,
-        user_abstract=user_abstract,
-        academic_program_filter=program_filter,
-        similarity_threshold=similarity_threshold,
-    )
+    try:
+        history_id, matches = matcher.run_stage1(
+            researcher_id=researcher_id,
+            keywords=keywords,
+            user_abstract=user_abstract,
+            academic_program_filter=program_filter,
+            similarity_threshold=similarity_threshold,
+        )
+    except Exception:
+        logger.exception("Failed to run a new comparison for researcher %s.", researcher_id)
+        return None, None, ("Unable to run the comparison right now. Please try again shortly.", "danger")
 
     if history_id is None:
         return None, None, ("No documents found for the selected program.", "warning")

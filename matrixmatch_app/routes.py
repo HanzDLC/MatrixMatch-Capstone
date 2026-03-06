@@ -228,12 +228,17 @@ def register_routes(app):
                 flash(str(exc), "danger")
                 return redirect(url_for("comparison_new"))
 
-            history_id, _matches, history_data = matcher.run_stage1_guest(
-                keywords=keywords,
-                user_abstract=user_abstract,
-                academic_program_filter=program_filter,
-                similarity_threshold=similarity_threshold,
-            )
+            try:
+                history_id, _matches, history_data = matcher.run_stage1_guest(
+                    keywords=keywords,
+                    user_abstract=user_abstract,
+                    academic_program_filter=program_filter,
+                    similarity_threshold=similarity_threshold,
+                )
+            except Exception:
+                logger.exception("Failed to run guest comparison.")
+                flash("Unable to run the comparison right now. Please try again shortly.", "danger")
+                return redirect(url_for("comparison_new"))
             if history_id is None:
                 flash("No documents found for the selected program.", "warning")
                 return redirect(url_for("comparison_new"))
