@@ -1,10 +1,21 @@
 import base64
+import importlib
 import io
+import logging
 from typing import Dict, List, Optional, Tuple
 
-import matcher
-
 from matrixmatch_app.parsers import parse_keywords
+
+logger = logging.getLogger(__name__)
+
+
+def _get_matcher_module():
+    try:
+        return importlib.import_module("matcher")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Comparison dependencies are not installed. Install requirements.txt to enable comparison features."
+        ) from exc
 
 
 def parse_threshold(threshold_str: str, default_pct: float = 60.0) -> float:
@@ -37,6 +48,12 @@ def run_new_comparison(
 
     similarity_threshold = parse_threshold(threshold_str)
 
+    try:
+        matcher = _get_matcher_module()
+    except RuntimeError as exc:
+        logger.exception("Comparison requested without matcher dependencies.")
+        return None, None, (str(exc), "danger")
+
     history_id, matches = matcher.run_stage1(
         researcher_id=researcher_id,
         keywords=keywords,
@@ -55,6 +72,12 @@ def build_history_heatmap_data_uri(keywords: List[str], matches: List[Dict]) -> 
     if not keywords or not matches:
         return None
 
+    try:
+        matcher = _get_matcher_module()
+    except RuntimeError:
+        logger.exception("Heatmap requested without matcher dependencies.")
+        return None
+
     matrix = matcher.build_stage2_matrix(keywords, matches)
     if matrix is None:
         return None
@@ -69,6 +92,12 @@ def build_history_heatmap_data_uri(keywords: List[str], matches: List[Dict]) -> 
 
 
 def build_history_heatmap_table(keywords: List[str], matches: List[Dict]):
+    try:
+        matcher = _get_matcher_module()
+    except RuntimeError:
+        logger.exception("Heatmap table requested without matcher dependencies.")
+        return None
+
     matrix = matcher.build_stage2_matrix(keywords, matches)
     if matrix is None or matrix.empty:
         return None

@@ -1,11 +1,21 @@
-from flask import flash, redirect, render_template, request, session, url_for
+import importlib
 
-import matcher
+from flask import flash, redirect, render_template, request, session, url_for
 
 from matrixmatch_app.auth import get_current_user, login_required, role_required
 from matrixmatch_app.parsers import parse_keywords
 from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo
 from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service, document_service
+
+
+def _get_matcher_module():
+    try:
+        return importlib.import_module("matcher")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Comparison dependencies are not installed. Install requirements.txt to enable comparison and history features."
+        ) from exc
+
 
 def register_routes(app):
     @app.route("/")
@@ -186,6 +196,11 @@ def register_routes(app):
                 return redirect(url_for("comparison_new"))
 
             similarity_threshold = comparison_service.parse_threshold(threshold_str)
+            try:
+                matcher = _get_matcher_module()
+            except RuntimeError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("comparison_new"))
 
             history_id, _matches, history_data = matcher.run_stage1_guest(
                 keywords=keywords,
@@ -263,6 +278,11 @@ def register_routes(app):
             history_entry = dict(history_data)
             history_entry["keywords_list"] = parse_keywords(history_entry.get("keywords"))
             keywords = history_entry["keywords_list"]
+            try:
+                matcher = _get_matcher_module()
+            except RuntimeError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("comparison_new"))
 
             doc_pairs = matcher._parse_top_matches(history_entry.get("top_matches", ""))
             matches = []
@@ -307,6 +327,12 @@ def register_routes(app):
                 semantic_highlights=semantic_highlights,
                 table_data=table_data,
             )
+
+        try:
+            matcher = _get_matcher_module()
+        except RuntimeError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("history"))
 
         # --- Normal path ---
         history_entry, matches = matcher.get_history_with_matches(history_id)
@@ -420,6 +446,12 @@ def register_routes(app):
     @login_required
     def history_heatmap(history_id):
         user = get_current_user()
+        try:
+            matcher = _get_matcher_module()
+        except RuntimeError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("history"))
+
         history_entry, matches = matcher.get_history_with_matches(history_id)
         if not history_entry:
             flash("History entry not found.", "danger")

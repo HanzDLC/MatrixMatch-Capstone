@@ -1,11 +1,9 @@
 import json
 import os
 import io
+import importlib
 import logging
 from typing import Dict, List, Optional, Tuple
-
-import fitz  # PyMuPDF
-import docx
 
 from matrixmatch_app.repositories import documents, document_logs
 
@@ -28,6 +26,24 @@ def _log_document_action(document_id: int, title: str, action: str, modified_by:
             action.lower(),
         )
         return False
+
+
+def _load_docx_module():
+    try:
+        return importlib.import_module("docx")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "python-docx is not installed. Install dependencies from requirements.txt to enable DOCX extraction."
+        ) from exc
+
+
+def _load_fitz_module():
+    try:
+        return importlib.import_module("fitz")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "PyMuPDF is not installed. Install dependencies from requirements.txt to enable PDF extraction."
+        ) from exc
 
 
 def list_all_documents() -> List[Dict]:
@@ -145,6 +161,7 @@ def extract_document_info(file_data: bytes, filename: str) -> Tuple[bool, str, D
                 
         elif ext in ['.docx', '.doc']:
             # docx can sometimes handle .doc but typically it's for .docx
+            docx = _load_docx_module()
             file_stream = io.BytesIO(file_data)
             doc = docx.Document(file_stream)
             paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -153,6 +170,7 @@ def extract_document_info(file_data: bytes, filename: str) -> Tuple[bool, str, D
                 abstract = "\n".join(paragraphs[1:])
                 
         elif ext == '.pdf':
+            fitz = _load_fitz_module()
             file_stream = io.BytesIO(file_data)
             doc = fitz.open(stream=file_stream, filetype="pdf")
             

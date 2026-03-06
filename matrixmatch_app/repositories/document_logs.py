@@ -8,8 +8,8 @@ def add_log(document_id: int, document_title: str, action: str, modified_by: str
 
     cursor.execute(
         """
-        INSERT INTO matrixmatch.documents_log (document_id, document_title, action, modified_by)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO matrixmatch.documents_log (log_id, document_id, document_title, action, modified_by)
+        VALUES (nextval('matrixmatch.documents_log_log_id_seq'::regclass), %s, %s, %s, %s)
         """,
         (document_id, document_title, action, modified_by)
     )
