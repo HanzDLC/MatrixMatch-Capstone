@@ -36,3 +36,6 @@ def validate_password_reset(
 
 def reset_researcher_password(researcher_id: int, new_password: str) -> None:
     users.update_user_password(researcher_id, new_password.strip())
+
+def promote_researcher(researcher_id: int) -> bool:
+    return users.promote_researcher_to_admin(researcher_id)

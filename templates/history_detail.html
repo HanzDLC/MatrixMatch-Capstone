@@ -57,13 +57,13 @@
                 </div>
                 <div class="card__body">
                     {% if keywords and keywords|length > 0 %}
-                        <ul class="keyword-list">
-                            {% for kw in keywords %}
-                                <li class="keyword-chip">{{ kw }}</li>
-                            {% endfor %}
-                        </ul>
+                    <ul class="keyword-list">
+                        {% for kw in keywords %}
+                        <li class="keyword-chip">{{ kw }}</li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
-                        <p class="empty-state">No keywords were saved for this run.</p>
+                    <p class="empty-state">No keywords were saved for this run.</p>
                     {% endif %}
                 </div>
             </section>
@@ -80,34 +80,39 @@
             </div>
 
             {% if matches and matches|length > 0 %}
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Doc ID</th>
-                                <th>Title</th>
-                                <th>Program</th>
-                                <th>Similarity</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for m in matches %}
-                                <tr>
-                                    <td>{{ m.document_id }}</td>
-                                    <td>{{ m.title }}</td>
-                                    <td>{{ m.program }}</td>
-                                    <td>{{ (m.similarity * 100) | round(2) }}%</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Doc ID</th>
+                            <th>Title</th>
+                            <th>Program</th>
+                            <th>Similarity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in matches %}
+                        <tr>
+                            <td>{{ m.document_id }}</td>
+                            <td>{{ m.title }}</td>
+                            <td>{{ m.program }}</td>
+                            <td>{{ (m.similarity * 100) | round(2) }}%</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm view-highlight-btn"
+                                    data-doc-id="{{ m.document_id }}">View Highlighted Text</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <p class="empty-state">No stage 1 matches were saved for this history entry.</p>
+            <p class="empty-state">No stage 1 matches were saved for this history entry.</p>
             {% endif %}
         </section>
 
-        <section class="card">
+        <section class="card" id="semanticHighlightsCard" style="display: none;">
             <div class="card__header">
                 <div>
                     <h2 class="card__title">Semantic Sentence Highlights</h2>
@@ -119,70 +124,68 @@
 
             <div class="card__body">
                 {% if semantic_highlights and semantic_highlights|length > 0 %}
-                    {% for highlight in semantic_highlights %}
-                        <div class="mb-3 semantic-highlight-block" data-highlight-doc="{{ highlight.document_id }}">
-                            <h3 class="card-title">{{ highlight.title }} (ID:{{ highlight.document_id }})</h3>
-                            <p class="card-hint mb-2">
-                                Stage 1 Similarity: {{ (highlight.document_similarity * 100) | round(2) }}%
-                            </p>
+                {% for highlight in semantic_highlights %}
+                <div class="mb-3 semantic-highlight-block" data-highlight-doc="{{ highlight.document_id }}"
+                    style="display: none;">
+                    <h3 class="card-title">{{ highlight.title }} (ID:{{ highlight.document_id }})</h3>
+                    <p class="card-hint mb-2">
+                        Stage 1 Similarity: {{ (highlight.document_similarity * 100) | round(2) }}%
+                    </p>
 
-                            <div class="semantic-split">
-                                <div class="semantic-box">
-                                    <h4>Your Abstract</h4>
-                                    <div>
-                                        {% for sentence in highlight.user_overview_items %}
-                                            <span
-                                                class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
-                                                data-pair-list="{{ sentence.pair_ids | join(',') }}"
-                                            >{{ sentence.html | safe }}</span>{% if not loop.last %} {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                <div class="semantic-box">
-                                    <h4>{{ highlight.title }} Abstract</h4>
-                                    <div>
-                                        {% for sentence in highlight.doc_overview_items %}
-                                            <span
-                                                class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
-                                                data-pair-list="{{ sentence.pair_ids | join(',') }}"
-                                            >{{ sentence.html | safe }}</span>{% if not loop.last %} {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-wrapper">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Your Sentence</th>
-                                            <th>Matched Sentence</th>
-                                            <th>Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for pair in highlight.pairs %}
-                                            <tr
-                                                class="semantic-pair-row"
-                                                data-pair-id="{{ pair.pair_id }}"
-                                                data-user-text="{{ pair.user_sentence_plain | e }}"
-                                                data-doc-text="{{ pair.doc_sentence_plain | e }}"
-                                                data-score="{{ (pair.similarity * 100) | round(2) }}"
-                                            >
-                                                <td>{{ pair.user_sentence_html | safe }}</td>
-                                                <td>{{ pair.doc_sentence_html | safe }}</td>
-                                                <td>{{ (pair.similarity * 100) | round(2) }}%</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                    <div class="semantic-split">
+                        <div class="semantic-box">
+                            <h4>Your Abstract</h4>
+                            <div>
+                                {% for sentence in highlight.user_overview_items %}
+                                <span
+                                    class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
+                                    data-pair-list="{{ sentence.pair_ids | join(',') }}">{{ sentence.html | safe
+                                    }}</span>{% if not loop.last %} {% endif %}
+                                {% endfor %}
                             </div>
                         </div>
-                    {% endfor %}
+                        <div class="semantic-box">
+                            <h4>{{ highlight.title }} Abstract</h4>
+                            <div>
+                                {% for sentence in highlight.doc_overview_items %}
+                                <span
+                                    class="semantic-sentence{% if sentence.pair_ids and sentence.pair_ids|length > 0 %} semantic-hit{% endif %}"
+                                    data-pair-list="{{ sentence.pair_ids | join(',') }}">{{ sentence.html | safe
+                                    }}</span>{% if not loop.last %} {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Your Sentence</th>
+                                    <th>Matched Sentence</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pair in highlight.pairs %}
+                                <tr class="semantic-pair-row" data-pair-id="{{ pair.pair_id }}"
+                                    data-user-text="{{ pair.user_sentence_plain | e }}"
+                                    data-doc-text="{{ pair.doc_sentence_plain | e }}"
+                                    data-score="{{ (pair.similarity * 100) | round(2) }}">
+                                    <td>{{ pair.user_sentence_html | safe }}</td>
+                                    <td>{{ pair.doc_sentence_html | safe }}</td>
+                                    <td>{{ (pair.similarity * 100) | round(2) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
                 {% else %}
-                    <p class="empty-state">
-                        No sentence-level semantic overlaps were strong enough for this history entry.
-                    </p>
+                <p class="empty-state">
+                    No sentence-level semantic overlaps were strong enough for this history entry.
+                </p>
                 {% endif %}
 
                 <div class="semantic-hover-card" id="semanticHoverCard" hidden>
@@ -194,7 +197,7 @@
             </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="stage2MatrixCard" style="display: none;">
             <div class="card__header">
                 <div>
                     <h2 class="card__title">Stage 2 Matrix</h2>
@@ -204,19 +207,56 @@
                 </div>
             </div>
             <div class="card__body heatmap-section">
-                {% if matches and matches|length > 0 and keywords and keywords|length > 0 %}
-                    <p class="mb-2">Open the full table to inspect keyword-level similarity distribution.</p>
-                    <a
-                        href="{{ url_for('history_heatmap', history_id=history.history_id) }}"
-                        target="_blank"
-                        class="btn btn-primary btn-sm"
-                    >
-                        View Heatmap Table
-                    </a>
+                {% if table_data %}
+                <p class="mb-4">Interactive Document to Keyword Similarity Distribution:</p>
+                <div class="heatmap-legend mb-3">
+                    <div class="heatmap-legend-bar"></div>
+                    <div class="heatmap-legend-labels">
+                        <span>Low (0%)</span>
+                        <span>Medium</span>
+                        <span>High (100%)</span>
+                    </div>
+                </div>
+
+                <div class="heatmap-table-wrapper" style="overflow-x: auto;">
+                    <table class="heatmap-table" style="width: 100%; text-align: center;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left; padding: 10px;">Keyword / Document</th>
+                                {% for col in table_data['col_labels'] %}
+                                <th style="padding: 10px;"
+                                    title="Document ID: {{ col.split(':')[-1] if ':' in col else col }}">{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table_data['table_rows'] %}
+                            <tr>
+                                <td class="heatmap-row-label"
+                                    style="text-align: left; padding: 10px; font-weight: bold;">{{ row.keyword }}</td>
+                                {% for cell in row.cells %}
+                                {% if table_data['max_val'] != table_data['min_val'] %}
+                                {% set frac = (cell.value - table_data['min_val']) / (table_data['max_val'] -
+                                table_data['min_val']) %}
+                                {% else %}
+                                {% set frac = 0 %}
+                                {% endif %}
+                                {% set is_high = frac > 0.5 %}
+                                <td class="heatmap-cell {% if is_high %}heatmap-cell--high{% endif %}"
+                                    style="background-color: rgba(34, 197, 94, {{ '%.3f'|format(frac) }}); padding: 10px; border: 1px solid var(--border-subtle); color: {% if is_high %}#fff{% else %}var(--text-main){% endif %};"
+                                    title="Similarity: {{ (cell.value * 100) | round(2) }}%">
+                                    {{ (cell.value * 100) | round(1) }}%
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                    <p class="empty-state">
-                        Not enough data to build a matrix. You need both keywords and stage 1 matches.
-                    </p>
+                <p class="empty-state">
+                    Not enough data to build a matrix. You need both keywords and stage 1 matches.
+                </p>
                 {% endif %}
             </div>
         </section>
@@ -226,4 +266,38 @@
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/history_detail.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const viewHighlightBtns = document.querySelectorAll(".view-highlight-btn");
+        const semanticCard = document.getElementById("semanticHighlightsCard");
+        const heatmapCard = document.getElementById("stage2MatrixCard");
+        const allHighlightBlocks = document.querySelectorAll(".semantic-highlight-block");
+
+        viewHighlightBtns.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const docId = btn.getAttribute("data-doc-id");
+
+                // Hide all blocks
+                allHighlightBlocks.forEach(block => {
+                    block.style.display = "none";
+                });
+
+                // Find the target block and show it
+                const targetBlock = document.querySelector(`.semantic-highlight-block[data-highlight-doc="${docId}"]`);
+                if (targetBlock) {
+                    targetBlock.style.display = "block";
+                }
+
+                // Make the wrapper cards visible
+                if (semanticCard) semanticCard.style.display = "block";
+                if (heatmapCard) heatmapCard.style.display = "block";
+
+                // Scroll the semantic card into view smoothly
+                if (semanticCard) {
+                    semanticCard.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

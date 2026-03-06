@@ -4,10 +4,8 @@ import matcher
 
 from matrixmatch_app.auth import get_current_user, login_required, role_required
 from matrixmatch_app.parsers import parse_keywords
-from matrixmatch_app.repositories import history as history_repo
-from matrixmatch_app.repositories import users as users_repo
-from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service
-
+from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo
+from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service, document_service
 
 def register_routes(app):
     @app.route("/")
@@ -16,6 +14,8 @@ def register_routes(app):
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
+
+
         if request.method == "GET":
             return render_template("login.html")
 
@@ -38,6 +38,8 @@ def register_routes(app):
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
+
+
         if request.method == "GET":
             return render_template("register.html")
 
@@ -57,7 +59,7 @@ def register_routes(app):
     def logout():
         session.clear()
         flash("You have been logged out.", "info")
-        return redirect(url_for("login"))
+        return redirect(url_for("home"))
 
     @app.route("/dashboard")
     @login_required
@@ -70,6 +72,35 @@ def register_routes(app):
 
         session.clear()
         return redirect(url_for("login"))
+
+    @app.route("/profile", methods=["GET", "POST"])
+    @login_required
+    def profile():
+        user = get_current_user()
+
+        if request.method == "GET":
+            return render_template("profile.html", user=user)
+
+        first_name = request.form.get("first_name", "")
+        last_name = request.form.get("last_name", "")
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        success, message = auth_service.update_profile(
+            user["id"], first_name, last_name, password, confirm_password
+        )
+
+        if success:
+            session["first_name"] = first_name
+            session["last_name"] = last_name
+            flash(message[0], message[1])
+            return redirect(url_for("profile"))
+        
+        flash(message[0], message[1])
+        return render_template(
+            "profile.html",
+            user={**user, "first_name": first_name, "last_name": last_name}
+        )
 
     @app.route("/admin/dashboard")
     @role_required("Admin")
@@ -152,6 +183,10 @@ def register_routes(app):
             matches=matches,
         )
 
+        table_data = None
+        if keywords and matches:
+            table_data = comparison_service.build_history_heatmap_table(keywords, matches)
+
         return render_template(
             "history_detail.html",
             user=user,
@@ -160,6 +195,7 @@ def register_routes(app):
             keywords=keywords,
             heatmap_data_uri=heatmap_data_uri,
             semantic_highlights=semantic_highlights,
+            table_data=table_data,
         )
 
     @app.route("/admin/researchers")
@@ -182,6 +218,16 @@ def register_routes(app):
             flash(f"Researcher ID {researcher_id} has been deleted.", "info")
         else:
             flash("Researcher not found.", "warning")
+        return redirect(url_for("manage_researchers"))
+
+    @app.route("/admin/researchers/<int:researcher_id>/promote", methods=["POST"])
+    @role_required("Admin")
+    def admin_promote_researcher(researcher_id):
+        promoted = admin_service.promote_researcher(researcher_id)
+        if promoted:
+            flash(f"Researcher ID {researcher_id} has been promoted to Admin.", "success")
+        else:
+            flash("Researcher not found or could not be promoted.", "warning")
         return redirect(url_for("manage_researchers"))
 
     @app.route("/admin/researchers/<int:researcher_id>/history")
@@ -260,3 +306,108 @@ def register_routes(app):
             min_val=table_data["min_val"],
             max_val=table_data["max_val"],
         )
+
+    @app.route("/admin/documents")
+    @role_required("Admin")
+    def manage_documents():
+        documents = document_service.list_all_documents()
+        return render_template(
+            "manage_documents.html",
+            user=get_current_user(),
+            documents=documents,
+        )
+
+    @app.route("/admin/documents/new", methods=["GET", "POST"])
+    @role_required("Admin")
+    def add_document():
+        if request.method == "GET":
+            return render_template("document_form.html", user=get_current_user(), document=None)
+
+        title = request.form.get("title", "")
+        program = request.form.get("academic_program", "")
+        abstract = request.form.get("abstract", "")
+
+        user = get_current_user()
+        modified_by = f"{user['first_name']} {user['last_name']}"
+
+        success, message = document_service.add_document(title, program, abstract, modified_by)
+        if success:
+            flash(message, "success")
+            return redirect(url_for("manage_documents"))
+        else:
+            flash(message, "danger")
+            return render_template(
+                "document_form.html",
+                user=get_current_user(),
+                document={"title": title, "academic_program": program, "abstract": abstract}
+            )
+
+    @app.route("/admin/documents/<int:document_id>/edit", methods=["GET", "POST"])
+    @role_required("Admin")
+    def edit_document(document_id):
+        document = document_service.get_document(document_id)
+        if not document:
+            flash("Document not found.", "warning")
+            return redirect(url_for("manage_documents"))
+
+        if request.method == "GET":
+            return render_template("document_form.html", user=get_current_user(), document=document)
+
+        title = request.form.get("title", "")
+        program = request.form.get("academic_program", "")
+        abstract = request.form.get("abstract", "")
+
+        user = get_current_user()
+        modified_by = f"{user['first_name']} {user['last_name']}"
+
+        success, message = document_service.update_document(document_id, title, program, abstract, modified_by)
+        if success:
+            flash(message, "success")
+            return redirect(url_for("manage_documents"))
+        else:
+            flash(message, "danger")
+            return render_template(
+                "document_form.html",
+                user=get_current_user(),
+                document={"document_id": document_id, "title": title, "academic_program": program, "abstract": abstract}
+            )
+
+    @app.route("/admin/documents/<int:document_id>/delete", methods=["POST"])
+    @role_required("Admin")
+    def admin_delete_document(document_id):
+        user = get_current_user()
+        modified_by = f"{user['first_name']} {user['last_name']}"
+        deleted = document_service.delete_document(document_id, modified_by)
+        if deleted:
+            flash(f"Document ID {document_id} has been deleted.", "info")
+        else:
+            flash("Document not found.", "warning")
+        return redirect(url_for("manage_documents"))
+
+    @app.route("/admin/document-logs")
+    @role_required("Admin")
+    def document_logs():
+        logs = document_logs_repo.get_all_logs()
+        return render_template(
+            "document_logs.html",
+            user=get_current_user(),
+            logs=logs,
+        )
+
+    @app.route("/admin/documents/extract", methods=["POST"])
+    @role_required("Admin")
+    def admin_extract_document():
+        if "file" not in request.files:
+            return {"error": "No file uploaded"}, 400
+            
+        file = request.files["file"]
+        if not file or not file.filename:
+            return {"error": "No selected file"}, 400
+            
+        file_data = file.read()
+        success, message, data = document_service.extract_document_info(file_data, file.filename)
+        
+        if success:
+            return {"title": data.get("title", ""), "abstract": data.get("abstract", "")}, 200
+        else:
+            return {"error": message}, 400

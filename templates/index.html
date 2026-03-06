@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,10 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
-        rel="stylesheet"
-    >
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
+
 <body data-theme="light" class="landing-page">
     <div class="landing-shell">
         <header class="landing-header">
@@ -21,12 +22,8 @@
                 <a href="{{ url_for('login') }}">Login</a>
                 <a href="{{ url_for('register') }}">Register</a>
             </nav>
-            <button
-                type="button"
-                id="themeToggle"
-                class="icon-button theme-toggle"
-                aria-label="Toggle dark or light mode"
-            >
+            <button type="button" id="themeToggle" class="icon-button theme-toggle"
+                aria-label="Toggle dark or light mode">
                 <span class="theme-toggle__icon" id="themeToggleIcon">Light</span>
             </button>
         </header>
@@ -40,8 +37,7 @@
                     overlap, and visualizes topic alignment in one streamlined system.
                 </p>
                 <div class="landing-hero__actions">
-                    <a href="{{ url_for('login') }}" class="btn btn-primary cta-btn">Get Started</a>
-                    <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">Create Account</a>
                 </div>
             </div>
             <aside class="landing-hero__panel">
@@ -134,4 +130,5 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>

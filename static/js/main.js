@@ -60,10 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 backToTop.classList.remove("is-visible");
             }
         };
-        window.addEventListener("scroll", updateBackToTop, {passive: true});
+        window.addEventListener("scroll", updateBackToTop, { passive: true });
         updateBackToTop();
         backToTop.addEventListener("click", () => {
-            window.scrollTo({top: 0, behavior: "smooth"});
+            window.scrollTo({ top: 0, behavior: "smooth" });
         });
     }
 
@@ -94,13 +94,58 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    document.querySelector(".cta-btn")?.addEventListener("click", (event) => {
-        event.preventDefault();
-        window.location.href = "/login";
+    // --- Custom Confirmation Modal Logic ---
+    const confirmModal = document.getElementById("confirmModal");
+    const confirmModalTitle = document.getElementById("confirmModalTitle");
+    const confirmModalMessage = document.getElementById("confirmModalMessage");
+    const confirmModalAccept = document.getElementById("confirmModalAccept");
+    let activeConfirmForm = null;
+
+    const closeConfirmModal = () => {
+        if (confirmModal) {
+            confirmModal.classList.remove("is-open");
+            confirmModal.setAttribute("aria-hidden", "true");
+        }
+        activeConfirmForm = null;
+    };
+
+    if (confirmModal) {
+        document.querySelectorAll("[data-modal-close]").forEach(btn => {
+            btn.addEventListener("click", closeConfirmModal);
+        });
+
+        confirmModalAccept?.addEventListener("click", () => {
+            if (activeConfirmForm) {
+                // Remove data-confirm so it doesn't trigger again, then submit
+                activeConfirmForm.removeAttribute("data-confirm");
+                activeConfirmForm.submit();
+            }
+            closeConfirmModal();
+        });
+    }
+
+    document.querySelectorAll("form[data-confirm]").forEach((form) => {
+        form.addEventListener("submit", (event) => {
+            // If the attribute is still there, intercept it
+            if (form.hasAttribute("data-confirm")) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                activeConfirmForm = form;
+
+                const customMessage = form.getAttribute("data-confirm") || "Are you sure you want to proceed?";
+                if (confirmModalMessage) {
+                    confirmModalMessage.textContent = customMessage;
+                }
+
+                if (confirmModal) {
+                    confirmModal.classList.add("is-open");
+                    confirmModal.setAttribute("aria-hidden", "false");
+                    // Focus the cancel button for safety
+                    const cancelBtn = confirmModal.querySelector('.btn-secondary');
+                    if (cancelBtn) cancelBtn.focus();
+                }
+            }
+        });
     });
 
-    document.querySelector(".js-go-login")?.addEventListener("click", (event) => {
-        event.preventDefault();
-        window.location.href = "/login";
-    });
 });

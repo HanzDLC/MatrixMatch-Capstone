@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}My Profile - MatrixMatch{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">My Profile</h1>
+            <p class="page-subtitle">Update your personal information and account security.</p>
+        </div>
+    </div>
+    <div class="card form-card" style="max-width: 600px; margin: 0 auto;">
+        <form method="post" action="{{ url_for('profile') }}">
+            <div class="form-group">
+                <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" id="first_name" name="first_name" class="form-input" value="{{ user.first_name }}"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" id="last_name" name="last_name" class="form-input" value="{{ user.last_name }}"
+                    required>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-main); margin: 2rem 0;">
+            <h3 style="margin-bottom: 1rem;">Change Password</h3>
+            <p class="helper-text" style="margin-bottom: 1rem;">Leave blank if you do not want to change your password.
+            </p>
+
+            <div class="form-group">
+                <label for="password" class="form-label">New Password</label>
+                <input type="password" id="password" name="password" class="form-input" placeholder="********">
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">Confirm New Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-input"
+                    placeholder="********">
+            </div>
+
+            <div class="form-actions mt-6">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

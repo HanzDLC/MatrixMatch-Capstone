@@ -1,105 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const searchInput = document.getElementById("researcherSearch");
-    const table = document.getElementById("researchersTable");
-    const sortBtn = document.getElementById("sortResearchersBtn");
-    const filterBtn = document.getElementById("filterResearchersBtn");
-    const exportBtn = document.getElementById("exportResearchersBtn");
-    let showRecentOnly = false;
 
-    const getRows = () => (table ? Array.from(table.querySelectorAll("tbody tr")) : []);
-    const isRecentRow = (row) => {
-        const value = row.dataset.registered;
-        if (!value) {
-            return false;
-        }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const cutoff = new Date(today);
-        cutoff.setDate(today.getDate() - 30);
-        const dateValue = new Date(value);
-        return !Number.isNaN(dateValue.getTime()) && dateValue >= cutoff;
-    };
-
-    const applyTableFilters = () => {
-        if (!table) {
-            return;
-        }
-        const term = (searchInput?.value || "").toLowerCase().trim();
-        getRows().forEach((row) => {
-            const text = row.innerText.toLowerCase();
-            const passesSearch = text.includes(term);
-            const passesDate = !showRecentOnly || isRecentRow(row);
-            row.style.display = passesSearch && passesDate ? "" : "none";
-        });
-    };
-
-    if (table && searchInput) {
-        searchInput.addEventListener("input", () => {
-            applyTableFilters();
-        });
-    }
-
-    if (table && sortBtn) {
-        let asc = false;
-        sortBtn.addEventListener("click", () => {
-            const tbody = table.querySelector("tbody");
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-            rows.sort((a, b) => {
-                const aDate = a.dataset.registered || "";
-                const bDate = b.dataset.registered || "";
-                return asc ? aDate.localeCompare(bDate) : bDate.localeCompare(aDate);
-            });
-            rows.forEach((row) => tbody.appendChild(row));
-            asc = !asc;
-            sortBtn.textContent = asc ? "Sort (Asc)" : "Sort (Desc)";
-        });
-    }
-
-    if (table && filterBtn) {
-        filterBtn.addEventListener("click", () => {
-            showRecentOnly = !showRecentOnly;
-            filterBtn.textContent = showRecentOnly ? "Filters (30d)" : "Filters";
-            applyTableFilters();
-        });
-    }
-
-    document.querySelectorAll(".js-delete-researcher-form").forEach((form) => {
-        form.addEventListener("submit", (event) => {
-            const confirmDelete = window.confirm(
-                "Delete this researcher and all comparison history for this account?"
-            );
-            if (!confirmDelete) {
-                event.preventDefault();
-            }
-        });
-    });
-
-    if (table && exportBtn) {
-        exportBtn.addEventListener("click", () => {
-            const headers = Array.from(table.querySelectorAll("thead th"))
-                .slice(0, 4)
-                .map((th) => th.textContent.trim());
-            const rows = Array.from(table.querySelectorAll("tbody tr")).map((row) =>
-                Array.from(row.querySelectorAll("td"))
-                    .slice(0, 4)
-                    .map((cell) => `"${cell.innerText.replace(/\s+/g, " ").trim().replace(/"/g, '""')}"`)
-                    .join(",")
-            );
-
-            const csv = [headers.join(","), ...rows].join("\n");
-            const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement("a");
-            anchor.href = url;
-            anchor.download = "researchers.csv";
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            URL.revokeObjectURL(url);
-        });
-    }
-
-    applyTableFilters();
 
     const canvas = document.getElementById("activityChart");
     const rawDates = Array.isArray(window.matrixmatchResearcherDates)
@@ -160,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const points = values.map((value, index) => {
         const x = leftPadding + (chartWidth / (values.length - 1)) * index;
         const y = topPadding + chartHeight - (value / maxValue) * chartHeight;
-        return {x, y, value};
+        return { x, y, value };
     });
 
     const fillGradient = context.createLinearGradient(0, topPadding, 0, topPadding + chartHeight);

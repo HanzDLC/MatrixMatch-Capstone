@@ -10,9 +10,9 @@
                 Review past runs and open detailed semantic analysis for each comparison.
             </p>
             {% if selected_researcher %}
-                <p class="page-subtitle">
-                    Viewing history for {{ selected_researcher.first_name }} {{ selected_researcher.last_name }}.
-                </p>
+            <p class="page-subtitle">
+                Viewing history for {{ selected_researcher.first_name }} {{ selected_researcher.last_name }}.
+            </p>
             {% endif %}
         </div>
     </section>
@@ -22,14 +22,6 @@
             <div>
                 <h2 class="card__title">Saved Runs</h2>
                 <p class="card__subtitle">Filter by keyword, program, threshold, or date.</p>
-            </div>
-            <div class="table-controls">
-                <input
-                    type="text"
-                    id="historySearch"
-                    class="form-input form-input--sm"
-                    placeholder="Search history..."
-                >
             </div>
         </div>
 
@@ -46,32 +38,27 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% if history_rows and history_rows|length > 0 %}
-                        {% for row in history_rows %}
-                            <tr>
-                                <td>#{{ row.history_id }}</td>
-                                <td>{{ row.keywords }}</td>
-                                <td>{{ row.academic_program_filter }}</td>
-                                <td>{{ (row.similarity_threshold * 100) | round(0) }}%</td>
-                                <td>
-                                    {% if row.created_at %}
-                                        {{ row.created_at.strftime('%Y-%m-%d %I:%M %p') }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('history_detail', history_id=row.history_id) }}" class="btn btn-ghost btn-sm">
-                                        View Detail
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="6" class="table-empty">No history entries found.</td>
-                        </tr>
-                    {% endif %}
+                    {% for row in history_rows %}
+                    <tr>
+                        <td>#{{ row.history_id }}</td>
+                        <td>{{ row.keywords }}</td>
+                        <td>{{ row.academic_program_filter }}</td>
+                        <td>{{ (row.similarity_threshold * 100) | round(0) }}%</td>
+                        <td>
+                            {% if row.created_at %}
+                            {{ row.created_at.strftime('%Y-%m-%d %I:%M %p') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('history_detail', history_id=row.history_id) }}"
+                                class="btn btn-ghost btn-sm">
+                                View Detail
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -80,5 +67,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+<script>
+    $(document).ready(function () {
+        $('#historyTable').DataTable({
+            "order": [[0, "desc"]]
+        });
+    });
+</script>
 {% endblock %}

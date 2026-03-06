@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Document Logs | MatrixMatch{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Document Logs</h1>
+    <p class="page-subtitle">Track activity related to documents.</p>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <div>
+            <h2 class="card__title">Activity Logs</h2>
+            <p class="card__subtitle">All document addition, edit, and deletion events.</p>
+        </div>
+        <div class="table-actions">
+            <button id="filterLogsBtn" type="button" class="btn btn-secondary btn-sm">Filters</button>
+            <button id="sortLogsBtn" type="button" class="btn btn-secondary btn-sm">Sort</button>
+        </div>
+    </div>
+    <div class="card__body">
+        <table id="logsTable" class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Log ID</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Doc ID</th>
+                    <th scope="col">Document Title</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.log_id }}</td>
+                    <td>
+                        {% if log.action == 'Added' %}
+                        <span class="badge" style="background-color: var(--success); color: white;">Added</span>
+                        {% elif log.action == 'Edited' %}
+                        <span class="badge" style="background-color: var(--primary); color: white;">Edited</span>
+                        {% elif log.action == 'Deleted' %}
+                        <span class="badge" style="background-color: var(--danger); color: white;">Deleted</span>
+                        {% else %}
+                        <span class="badge">{{ log.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '' }}</td>
+                    <td>{{ log.modified_by }}</td>
+                    <td>{{ log.document_id }}</td>
+                    <td>{{ log.document_title }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    $(document).ready(function () {
+        $('#logsTable').DataTable({
+            "order": [[2, "desc"]],
+            "language": {
+                "emptyTable": "No logs found."
+            }
+        });
+    });
+</script>
+{% endblock %}

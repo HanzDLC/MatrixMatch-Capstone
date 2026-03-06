@@ -106,3 +106,26 @@ def update_user_password(researcher_id: int, new_password: str) -> None:
             """,
             (new_password, researcher_id),
         )
+
+def update_user_profile(user_id: int, first_name: str, last_name: str) -> None:
+    with db_cursor(commit=True) as cursor:
+        cursor.execute(
+            """
+            UPDATE matrixmatch."user"
+            SET first_name = %s, last_name = %s
+            WHERE researcher_id = %s
+            """,
+            (first_name, last_name, user_id),
+        )
+
+def promote_researcher_to_admin(researcher_id: int) -> bool:
+    with db_cursor(commit=True) as cursor:
+        cursor.execute(
+            """
+            UPDATE matrixmatch."user"
+            SET role = 'Admin'
+            WHERE researcher_id = %s AND role = 'Researcher'
+            """,
+            (researcher_id,),
+        )
+        return cursor.rowcount > 0

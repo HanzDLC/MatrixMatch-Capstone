@@ -44,3 +44,28 @@ def register_user(
         return False, ("Unable to create account. Please try again.", "danger")
 
     return True, ("Account created! You can now log in.", "success")
+
+def update_profile(
+    user_id: int,
+    first_name: str,
+    last_name: str,
+    new_password: str,
+    confirm_password: str
+) -> Tuple[bool, Tuple[str, str]]:
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+    new_password = (new_password or "").strip()
+    confirm_password = (confirm_password or "").strip()
+
+    if not first_name or not last_name:
+        return False, ("First name and last name are required.", "danger")
+
+    if new_password:
+        if new_password != confirm_password:
+            return False, ("Passwords do not match.", "danger")
+        if len(new_password) < 6:
+            return False, ("Password must be at least 6 characters.", "warning")
+        users.update_user_password(user_id, new_password)
+
+    users.update_user_profile(user_id, first_name, last_name)
+    return True, ("Profile updated successfully.", "success")

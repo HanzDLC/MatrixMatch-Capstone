@@ -27,9 +27,9 @@
             </div>
             <div class="chart-canvas-wrap">
                 {% if researchers and researchers|length > 0 %}
-                    <canvas id="activityChart" width="960" height="320"></canvas>
+                <canvas id="activityChart" width="960" height="320"></canvas>
                 {% else %}
-                    <div class="chart-empty">No researcher data to plot yet.</div>
+                <div class="chart-empty">No researcher data to plot yet.</div>
                 {% endif %}
             </div>
         </article>
@@ -54,93 +54,129 @@
                 <h2 class="card__title">Researchers</h2>
                 <p class="card__subtitle">Search and manage researcher accounts.</p>
             </div>
-            <div class="table-actions">
-                <input
-                    type="text"
-                    id="researcherSearch"
-                    class="form-input"
-                    placeholder="Search by name, email, or ID"
-                >
-                <button id="filterResearchersBtn" type="button" class="btn btn-secondary btn-sm">Filters</button>
-                <button id="sortResearchersBtn" type="button" class="btn btn-secondary btn-sm">Sort</button>
-            </div>
+
         </div>
 
         {% if researchers and researchers|length > 0 %}
-            <div class="table-wrapper">
-                <table class="table" id="researchersTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Registered</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for r in researchers %}
-                            <tr data-registered="{{ r.registered_date.strftime('%Y-%m-%d') if r.registered_date else '' }}">
-                                <td>{{ r.researcher_id }}</td>
-                                <td>
-                                    <div style="display:flex; align-items:center; gap:10px;">
-                                        <span class="sidebar__avatar">
-                                            {{ r.first_name[0] }}{{ r.last_name[0] }}
-                                        </span>
-                                        <span>{{ r.first_name }} {{ r.last_name }}</span>
-                                    </div>
-                                </td>
-                                <td>{{ r.email }}</td>
-                                <td>
-                                    {% if r.registered_date %}
-                                        {{ r.registered_date.strftime('%Y-%m-%d %H:%M:%S') }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td class="table__actions">
-                                    <div class="actions-group">
-                                        <a
-                                            href="{{ url_for('admin_reset_password', researcher_id=r.researcher_id) }}"
-                                            class="btn btn-ghost btn-xxs"
-                                        >
-                                            Reset
-                                        </a>
-                                        <a
-                                            href="{{ url_for('admin_view_history', researcher_id=r.researcher_id) }}"
-                                            class="btn btn-ghost btn-xxs"
-                                        >
-                                            History
-                                        </a>
-                                        <form
-                                            method="post"
-                                            action="{{ url_for('admin_delete_researcher', researcher_id=r.researcher_id) }}"
-                                            class="inline-form js-delete-researcher-form"
-                                        >
-                                            <button type="submit" class="btn btn-danger btn-xxs">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-wrapper">
+            <table class="table" id="researchersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in researchers %}
+                    <tr data-registered="{{ r.registered_date.strftime('%Y-%m-%d') if r.registered_date else '' }}">
+                        <td>{{ r.researcher_id }}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span class="sidebar__avatar">
+                                    {{ r.first_name[0] }}{{ r.last_name[0] }}
+                                </span>
+                                <span>{{ r.first_name }} {{ r.last_name }}</span>
+                            </div>
+                        </td>
+                        <td>{{ r.email }}</td>
+                        <td>
+                            {% if r.registered_date %}
+                            {{ r.registered_date.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="table__actions">
+                            <div class="actions-group">
+                                <a href="{{ url_for('admin_reset_password', researcher_id=r.researcher_id) }}"
+                                    class="btn btn-ghost btn-xxs">
+                                    Reset
+                                </a>
+                                <a href="{{ url_for('admin_view_history', researcher_id=r.researcher_id) }}"
+                                    class="btn btn-ghost btn-xxs">
+                                    History
+                                </a>
+                                <form method="post"
+                                    action="{{ url_for('admin_promote_researcher', researcher_id=r.researcher_id) }}"
+                                    class="inline-form js-promote-researcher-form"
+                                    data-confirm="Are you sure you want to promote this researcher to Admin?">
+                                    <button type="submit" class="btn btn-primary btn-xxs">Promote</button>
+                                </form>
+                                <form method="post"
+                                    action="{{ url_for('admin_delete_researcher', researcher_id=r.researcher_id) }}"
+                                    class="inline-form js-delete-researcher-form"
+                                    data-confirm="Delete this researcher and all comparison history for this account?">
+                                    <button type="submit" class="btn btn-danger btn-xxs">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
         {% else %}
-            <p class="empty-state">No researchers found.</p>
+        <p class="empty-state">No researchers found.</p>
         {% endif %}
     </section>
 </div>
 
 <script>
-window.matrixmatchResearcherDates = [
-{% for r in researchers %}
+    window.matrixmatchResearcherDates = [
+        {% for r in researchers %}
     "{{ r.registered_date.strftime('%Y-%m-%d') if r.registered_date else '' }}",
-{% endfor %}
+        {% endfor %}
 ];
 </script>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/manage_researchers.js') }}"></script>
+<script>
+    $(document).ready(function () {
+        $('#researchersTable').DataTable({
+            "order": [[0, "desc"]]
+        });
+
+        $('.js-delete-researcher-form').on('submit', function (e) {
+            e.preventDefault();
+            const form = this;
+            Swal.fire({
+                title: 'Delete researcher?',
+                text: "Delete this researcher and all comparison history for this account?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            })
+        });
+
+        $('.js-promote-researcher-form').on('submit', function (e) {
+            e.preventDefault();
+            const form = this;
+            Swal.fire({
+                title: 'Promote to Admin?',
+                text: "Are you sure you want to promote this researcher to Admin?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, promote!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            })
+        });
+    });
+</script>
 {% endblock %}
