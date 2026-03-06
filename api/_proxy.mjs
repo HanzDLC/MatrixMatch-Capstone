@@ -1,0 +1,101 @@
+function normalizeBaseUrl(rawUrl) {
+    if (!rawUrl) {
+        return null;
+    }
+
+    const trimmed = rawUrl.trim().replace(/\/+$/, "");
+    return trimmed || null;
+}
+
+function stripApiPrefix(pathname) {
+    const stripped = pathname.replace(/^\/api(?:\/|$)/, "/");
+    return stripped || "/";
+}
+
+function joinPath(basePath, requestPath) {
+    const normalizedBase = (basePath || "/").replace(/\/+$/, "");
+    const normalizedRequest = (requestPath || "/").replace(/^\/+/, "");
+
+    if (!normalizedRequest) {
+        return normalizedBase || "/";
+    }
+
+    if (!normalizedBase || normalizedBase === "/") {
+        return `/${normalizedRequest}`;
+    }
+
+    return `${normalizedBase}/${normalizedRequest}`;
+}
+
+function copyRequestHeaders(request) {
+    const headers = new Headers(request.headers);
+    const incomingUrl = new URL(request.url);
+
+    headers.set("x-forwarded-host", incomingUrl.host);
+    headers.set("x-forwarded-proto", "https");
+    headers.set("ngrok-skip-browser-warning", "1");
+
+    return headers;
+}
+
+async function buildRequestInit(request) {
+    const init = {
+        method: request.method,
+        headers: copyRequestHeaders(request),
+        redirect: "manual",
+    };
+
+    if (request.method !== "GET" && request.method !== "HEAD") {
+        init.body = await request.arrayBuffer();
+    }
+
+    return init;
+}
+
+function buildTargetUrl(request, baseUrl) {
+    const incomingUrl = new URL(request.url);
+    const targetUrl = new URL(baseUrl);
+    const forwardedPath = stripApiPrefix(incomingUrl.pathname);
+
+    targetUrl.pathname = joinPath(targetUrl.pathname, forwardedPath);
+    targetUrl.search = incomingUrl.search;
+
+    return targetUrl;
+}
+
+function jsonResponse(status, payload) {
+    return new Response(JSON.stringify(payload), {
+        status,
+        headers: {
+            "content-type": "application/json; charset=utf-8",
+        },
+    });
+}
+
+export async function proxyRequest(request) {
+    const baseUrl = normalizeBaseUrl(process.env.BACKEND_PROXY_URL);
+    if (!baseUrl) {
+        return jsonResponse(500, {
+            error: "BACKEND_PROXY_URL is not configured in Vercel.",
+        });
+    }
+
+    const targetUrl = buildTargetUrl(request, baseUrl);
+
+    try {
+        const upstreamResponse = await fetch(
+            targetUrl,
+            await buildRequestInit(request)
+        );
+
+        return new Response(upstreamResponse.body, {
+            status: upstreamResponse.status,
+            headers: upstreamResponse.headers,
+        });
+    } catch (error) {
+        return jsonResponse(502, {
+            error: "Failed to reach the local backend through ngrok.",
+            detail: error instanceof Error ? error.message : String(error),
+        });
+    }
+}

@@ -5,8 +5,12 @@
   "buildCommand": "",
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/api"
+    },
+    {
       "source": "/:path*",
-      "destination": "/api/proxy/:path*"
+      "destination": "/api/:path*"
     }
   ]
 }

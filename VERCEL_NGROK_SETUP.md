@@ -18,6 +18,16 @@ This project is still a server-rendered Flask app, so Vercel is configured here 
    `https://example.ngrok-free.app`
 4. Deploy.
 
+## Project Layout
+
+The Vercel side now uses the simplest function layout:
+
+- `api/index.mjs` for `/`
+- `api/[...path].mjs` for every other route
+- `api/_proxy.mjs` for the shared proxy logic
+
+This avoids the previous optional catch-all route shape and keeps the deployment aligned with Vercel's current ESM function model.
+
 ## Why Vercel Won't Install Python Packages
 
 This repository is configured so the Vercel project behaves like a plain "Other" project with:
@@ -26,7 +36,7 @@ This repository is configured so the Vercel project behaves like a plain "Other"
 - empty `installCommand`
 - empty `buildCommand`
 
-That prevents Vercel from trying to build the Flask app or install the heavy Python dependencies from `requirements.txt`.
+That prevents Vercel from trying to build the Flask app or install the heavy Python dependencies from `requirements.txt`. The functions are plain `.mjs` files, so Vercel does not need the Python runtime for the deployed proxy.
 
 ## Important
 
