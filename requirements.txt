@@ -6,3 +6,5 @@ psycopg2-binary
 pandas
 matplotlib
 sentence-transformers
+PyMuPDF
+python-docx
