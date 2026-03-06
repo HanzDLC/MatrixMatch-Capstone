@@ -1,4 +1,5 @@
 import importlib
+import logging
 
 from flask import flash, redirect, render_template, request, session, url_for
 
@@ -6,6 +7,8 @@ from matrixmatch_app.auth import get_current_user, login_required, role_required
 from matrixmatch_app.parsers import parse_keywords
 from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo
 from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service, document_service
+
+logger = logging.getLogger(__name__)
 
 
 def _get_matcher_module():
@@ -15,6 +18,29 @@ def _get_matcher_module():
         raise RuntimeError(
             "Comparison dependencies are not installed. Install requirements.txt to enable comparison and history features."
         ) from exc
+
+
+def _build_history_detail_extras(matcher_module, history_entry, matches):
+    keywords = parse_keywords(history_entry.get("keywords"))
+
+    semantic_highlights = []
+    if matches:
+        try:
+            semantic_highlights = matcher_module.build_semantic_sentence_highlights(
+                user_abstract=history_entry.get("user_abstract", ""),
+                matches=matches,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to build semantic highlights for history %s.",
+                history_entry.get("history_id"),
+            )
+
+    table_data = None
+    if keywords and matches:
+        table_data = comparison_service.build_history_heatmap_table(keywords, matches)
+
+    return keywords, semantic_highlights, table_data
 
 
 def register_routes(app):
@@ -308,14 +334,11 @@ def register_routes(app):
                             "abstract": doc.get("abstract") or "",
                         })
 
-            heatmap_data_uri = comparison_service.build_history_heatmap_data_uri(keywords, matches)
-            semantic_highlights = matcher.build_semantic_sentence_highlights(
-                user_abstract=history_entry.get("user_abstract", ""),
-                matches=matches,
+            keywords, semantic_highlights, table_data = _build_history_detail_extras(
+                matcher,
+                history_entry,
+                matches,
             )
-            table_data = None
-            if keywords and matches:
-                table_data = comparison_service.build_history_heatmap_table(keywords, matches)
 
             return render_template(
                 "history_detail.html",
@@ -323,7 +346,6 @@ def register_routes(app):
                 history=history_entry,
                 matches=matches,
                 keywords=keywords,
-                heatmap_data_uri=heatmap_data_uri,
                 semantic_highlights=semantic_highlights,
                 table_data=table_data,
             )
@@ -335,7 +357,13 @@ def register_routes(app):
             return redirect(url_for("history"))
 
         # --- Normal path ---
-        history_entry, matches = matcher.get_history_with_matches(history_id)
+        try:
+            history_entry, matches = matcher.get_history_with_matches(history_id)
+        except Exception:
+            logger.exception("Failed to load history detail %s.", history_id)
+            flash("Unable to load this history entry right now.", "danger")
+            return redirect(url_for("history"))
+
         if not history_entry:
             flash("History entry not found.", "warning")
             return redirect(url_for("history"))
@@ -344,16 +372,11 @@ def register_routes(app):
             flash("You are not allowed to view that history entry.", "danger")
             return redirect(url_for("history"))
 
-        keywords = parse_keywords(history_entry.get("keywords"))
-        heatmap_data_uri = comparison_service.build_history_heatmap_data_uri(keywords, matches)
-        semantic_highlights = matcher.build_semantic_sentence_highlights(
-            user_abstract=history_entry.get("user_abstract", ""),
-            matches=matches,
+        keywords, semantic_highlights, table_data = _build_history_detail_extras(
+            matcher,
+            history_entry,
+            matches,
         )
-
-        table_data = None
-        if keywords and matches:
-            table_data = comparison_service.build_history_heatmap_table(keywords, matches)
 
         return render_template(
             "history_detail.html",
@@ -361,7 +384,6 @@ def register_routes(app):
             history=history_entry,
             matches=matches,
             keywords=keywords,
-            heatmap_data_uri=heatmap_data_uri,
             semantic_highlights=semantic_highlights,
             table_data=table_data,
         )
@@ -452,7 +474,13 @@ def register_routes(app):
             flash(str(exc), "danger")
             return redirect(url_for("history"))
 
-        history_entry, matches = matcher.get_history_with_matches(history_id)
+        try:
+            history_entry, matches = matcher.get_history_with_matches(history_id)
+        except Exception:
+            logger.exception("Failed to load history heatmap %s.", history_id)
+            flash("Unable to load the stage 2 heatmap right now.", "danger")
+            return redirect(url_for("history"))
+
         if not history_entry:
             flash("History entry not found.", "danger")
             return redirect(url_for("history"))

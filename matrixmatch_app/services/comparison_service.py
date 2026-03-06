@@ -78,11 +78,15 @@ def build_history_heatmap_data_uri(keywords: List[str], matches: List[Dict]) -> 
         logger.exception("Heatmap requested without matcher dependencies.")
         return None
 
-    matrix = matcher.build_stage2_matrix(keywords, matches)
-    if matrix is None:
-        return None
+    try:
+        matrix = matcher.build_stage2_matrix(keywords, matches)
+        if matrix is None:
+            return None
 
-    fig = matcher.build_heatmap_figure(matrix)
+        fig = matcher.build_heatmap_figure(matrix)
+    except Exception:
+        logger.exception("Failed to build heatmap image for history detail.")
+        return None
     buf = io.BytesIO()
     fig.savefig(buf, format="png", bbox_inches="tight")
     buf.seek(0)
@@ -98,7 +102,12 @@ def build_history_heatmap_table(keywords: List[str], matches: List[Dict]):
         logger.exception("Heatmap table requested without matcher dependencies.")
         return None
 
-    matrix = matcher.build_stage2_matrix(keywords, matches)
+    try:
+        matrix = matcher.build_stage2_matrix(keywords, matches)
+    except Exception:
+        logger.exception("Failed to build heatmap table for history detail.")
+        return None
+
     if matrix is None or matrix.empty:
         return None
 
