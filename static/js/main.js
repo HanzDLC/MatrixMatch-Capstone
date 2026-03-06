@@ -1,12 +1,33 @@
-console.log("MatrixMatch frontend loaded.");
-
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebarToggle");
+    const sidebarBackdrop = document.getElementById("sidebarBackdrop");
     const themeToggle = document.getElementById("themeToggle");
     const themeToggleIcon = document.getElementById("themeToggleIcon");
     const backToTop = document.getElementById("backToTop");
     const body = document.body;
+    const isMobileViewport = () => window.matchMedia("(max-width: 920px)").matches;
+
+    const applyResponsiveTableLabels = () => {
+        document.querySelectorAll(".table").forEach((table) => {
+            const headers = Array.from(table.querySelectorAll("thead th")).map((header) =>
+                header.textContent.trim().replace(/\s+/g, " ")
+            );
+
+            table.querySelectorAll("tbody tr").forEach((row) => {
+                Array.from(row.children).forEach((cell, index) => {
+                    if (cell.tagName !== "TD") {
+                        return;
+                    }
+
+                    const label = headers[index] || row.dataset.label || "";
+                    if (label) {
+                        cell.dataset.label = label;
+                    }
+                });
+            });
+        });
+    };
 
     const preferredTheme = window.matchMedia &&
         window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -34,22 +55,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (sidebar && sidebarToggle) {
+        const syncSidebarState = (isOpen) => {
+            const open = Boolean(isOpen);
+            sidebar.classList.toggle("sidebar--open", open);
+            body.classList.toggle("has-sidebar-open", open && isMobileViewport());
+            sidebarToggle.setAttribute("aria-expanded", open ? "true" : "false");
+            sidebar.setAttribute("aria-hidden", open || !isMobileViewport() ? "false" : "true");
+
+            if (sidebarBackdrop) {
+                sidebarBackdrop.hidden = !open || !isMobileViewport();
+                sidebarBackdrop.classList.toggle("is-visible", open && isMobileViewport());
+            }
+        };
+
+        const closeSidebar = () => syncSidebarState(false);
+
         sidebarToggle.addEventListener("click", () => {
-            sidebar.classList.toggle("sidebar--open");
+            syncSidebarState(!sidebar.classList.contains("sidebar--open"));
+        });
+
+        sidebarBackdrop?.addEventListener("click", closeSidebar);
+
+        sidebar.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", () => {
+                if (isMobileViewport()) {
+                    closeSidebar();
+                }
+            });
         });
 
         document.addEventListener("click", (event) => {
-            if (window.innerWidth > 920) {
-                return;
-            }
-            if (!sidebar.classList.contains("sidebar--open")) {
+            if (!isMobileViewport() || !sidebar.classList.contains("sidebar--open")) {
                 return;
             }
             if (sidebar.contains(event.target) || sidebarToggle.contains(event.target)) {
                 return;
             }
-            sidebar.classList.remove("sidebar--open");
+            closeSidebar();
         });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && sidebar.classList.contains("sidebar--open")) {
+                closeSidebar();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (!isMobileViewport()) {
+                closeSidebar();
+            } else {
+                syncSidebarState(sidebar.classList.contains("sidebar--open"));
+            }
+        });
+
+        syncSidebarState(false);
     }
 
     if (backToTop) {
@@ -93,6 +152,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 0);
         });
     });
+
+    applyResponsiveTableLabels();
+    if (window.jQuery) {
+        window.jQuery(document).on("draw.dt", applyResponsiveTableLabels);
+    }
 
     // --- Custom Confirmation Modal Logic ---
     const confirmModal = document.getElementById("confirmModal");

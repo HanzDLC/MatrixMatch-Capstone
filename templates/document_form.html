@@ -16,19 +16,17 @@
             <a href="{{ url_for('manage_documents') }}" class="btn btn-secondary btn-sm">Back to List</a>
         </div>
     </div>
-    <div class="card form-card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card form-card">
 
         {% if not document or not document.document_id %}
         <!-- File Extraction Section (Only visible when adding a new document) -->
-        <div class="document-upload-section"
-            style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-main);">
-            <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--text-main);">Auto-fill from File</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+        <div class="document-upload-section">
+            <h3 class="section-heading">Auto-fill from File</h3>
+            <p class="helper-text">
                 Upload a document (PDF, DOCX, TXT, JSON) to automatically extract its Title and Abstract.
             </p>
-            <div class="upload-controls" style="display: flex; gap: 10px; align-items: center;">
-                <input type="file" id="documentFileExtractor" class="form-input" accept=".pdf,.docx,.doc,.txt,.json"
-                    style="flex: 1;">
+            <div class="upload-controls">
+                <input type="file" id="documentFileExtractor" class="form-input" accept=".pdf,.docx,.doc,.txt,.json">
                 <button type="button" id="extractBtn" class="btn btn-secondary">Extract Text</button>
             </div>
             <div id="extractStatus" style="font-size: 0.85rem; margin-top: 8px; font-weight: 500;"></div>
@@ -61,12 +59,12 @@
                 <label for="abstract" class="form-label">Abstract <span class="text-danger">*</span></label>
                 <textarea id="abstract" name="abstract" class="form-input" rows="8"
                     required>{{ document.abstract if document else '' }}</textarea>
-                <p class="helper-text mt-1" style="font-size: 0.85rem; color: var(--color-text-light);">
+                <p class="helper-text">
                     The text used for similarity matching against future search queries.
                 </p>
             </div>
 
-            <div class="form-actions mt-6">
+            <div class="form-actions">
                 <a href="{{ url_for('manage_documents') }}" class="btn btn-ghost">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     {{ 'Save Changes' if document and document.document_id else 'Add Document' }}

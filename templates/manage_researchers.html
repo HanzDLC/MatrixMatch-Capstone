@@ -59,7 +59,7 @@
 
         {% if researchers and researchers|length > 0 %}
         <div class="table-wrapper">
-            <table class="table" id="researchersTable">
+            <table class="table table--stacked" id="researchersTable">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -74,7 +74,7 @@
                     <tr data-registered="{{ r.registered_date.strftime('%Y-%m-%d') if r.registered_date else '' }}">
                         <td>{{ r.researcher_id }}</td>
                         <td>
-                            <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="inline-cluster">
                                 <span class="sidebar__avatar">
                                     {{ r.first_name[0] }}{{ r.last_name[0] }}
                                 </span>

@@ -27,7 +27,7 @@
             <div class="topbar__left">
                 {% if is_authenticated %}
                 <button class="icon-button topbar__menu-btn" id="sidebarToggle" aria-label="Toggle navigation"
-                    type="button">
+                    aria-controls="sidebar" aria-expanded="false" type="button">
                     Menu
                 </button>
                 {% endif %}
@@ -63,7 +63,7 @@
 
         <div class="layout{% if not is_authenticated %} layout--public{% endif %}">
             {% if is_authenticated %}
-            <nav class="sidebar" id="sidebar">
+            <nav class="sidebar" id="sidebar" aria-hidden="false">
                 <div class="sidebar__section">
                     <div class="sidebar__title">Navigation</div>
                     <a href="{{ url_for('dashboard') }}"
@@ -120,6 +120,7 @@
                     </div>
                 </div>
             </nav>
+            <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Close navigation" hidden></button>
             {% endif %}
 
             <main class="content">
