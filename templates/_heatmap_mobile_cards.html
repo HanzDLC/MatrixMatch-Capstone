@@ -1,0 +1,36 @@
+{% set heatmap_cols = table_data['col_labels'] if table_data is defined and table_data else col_labels %}
+{% set heatmap_rows = table_data['table_rows'] if table_data is defined and table_data else table_rows %}
+{% set heatmap_min = table_data['min_val'] if table_data is defined and table_data else min_val %}
+{% set heatmap_max = table_data['max_val'] if table_data is defined and table_data else max_val %}
+
+<div class="heatmap-mobile-list" aria-label="Mobile heatmap cards">
+    {% for col in heatmap_cols %}
+    {% set col_idx = loop.index0 %}
+    <article class="heatmap-mobile-card">
+        <header class="heatmap-mobile-card__header">
+            <p class="heatmap-mobile-card__eyebrow">Document {{ col_idx + 1 }}</p>
+            <h3 class="heatmap-mobile-card__title">{{ col }}</h3>
+        </header>
+
+        <div class="heatmap-mobile-rows">
+            {% for row in heatmap_rows %}
+            {% set cell = row.cells[col_idx] %}
+            {% if heatmap_max != heatmap_min %}
+            {% set frac = (cell.value - heatmap_min) / (heatmap_max - heatmap_min) %}
+            {% else %}
+            {% set frac = 0 %}
+            {% endif %}
+            <div class="heatmap-mobile-row">
+                <div class="heatmap-mobile-row__meta">
+                    <span class="heatmap-mobile-row__label">{{ row.keyword }}</span>
+                    <span class="heatmap-mobile-row__value">{{ (cell.value * 100) | round(1) }}%</span>
+                </div>
+                <div class="heatmap-mobile-row__bar" aria-hidden="true">
+                    <span style="width: {{ (cell.value * 100) | round(1) }}%;"></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+    {% endfor %}
+</div>

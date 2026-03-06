@@ -42,40 +42,44 @@
                     </div>
                 </div>
 
-                <div class="heatmap-table-wrapper">
-                    <table class="heatmap-table">
-                        <thead>
-                            <tr>
-                                <th>Keyword / Document</th>
-                                {% for col in col_labels %}
-                                    <th>{{ col }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in table_rows %}
+                <div class="heatmap-table-view">
+                    <div class="heatmap-table-wrapper">
+                        <table class="heatmap-table">
+                            <thead>
                                 <tr>
-                                    <td class="heatmap-row-label">{{ row.keyword }}</td>
-                                    {% for cell in row.cells %}
-                                        {% if max_val != min_val %}
-                                            {% set frac = (cell.value - min_val) / (max_val - min_val) %}
-                                        {% else %}
-                                            {% set frac = 0 %}
-                                        {% endif %}
-                                        {% set is_high = frac > 0.5 %}
-                                        <td
-                                            class="heatmap-cell {% if is_high %}heatmap-cell--high{% endif %}"
-                                            style="background-color: rgba(34, 197, 94, {{ '%.3f'|format(frac) }});"
-                                            title="Similarity: {{ (cell.value * 100) | round(2) }}%"
-                                        >
-                                            {{ (cell.value * 100) | round(1) }}%
-                                        </td>
+                                    <th>Keyword / Document</th>
+                                    {% for col in col_labels %}
+                                        <th>{{ col }}</th>
                                     {% endfor %}
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {% for row in table_rows %}
+                                    <tr>
+                                        <td class="heatmap-row-label">{{ row.keyword }}</td>
+                                        {% for cell in row.cells %}
+                                            {% if max_val != min_val %}
+                                                {% set frac = (cell.value - min_val) / (max_val - min_val) %}
+                                            {% else %}
+                                                {% set frac = 0 %}
+                                            {% endif %}
+                                            {% set is_high = frac > 0.5 %}
+                                            <td
+                                                class="heatmap-cell {% if is_high %}heatmap-cell--high{% endif %}"
+                                                style="background-color: rgba(34, 197, 94, {{ '%.3f'|format(frac) }});"
+                                                title="Similarity: {{ (cell.value * 100) | round(2) }}%"
+                                            >
+                                                {{ (cell.value * 100) | round(1) }}%
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                {% include "_heatmap_mobile_cards.html" %}
             </div>
         </section>
     </div>

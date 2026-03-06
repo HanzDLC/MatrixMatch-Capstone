@@ -218,41 +218,45 @@
                     </div>
                 </div>
 
-                <div class="heatmap-table-wrapper" style="overflow-x: auto;">
-                    <table class="heatmap-table" style="width: 100%; text-align: center;">
-                        <thead>
-                            <tr>
-                                <th style="text-align: left; padding: 10px;">Keyword / Document</th>
-                                {% for col in table_data['col_labels'] %}
-                                <th style="padding: 10px;"
-                                    title="Document ID: {{ col.split(':')[-1] if ':' in col else col }}">{{ col }}</th>
+                <div class="heatmap-table-view">
+                    <div class="heatmap-table-wrapper" style="overflow-x: auto;">
+                        <table class="heatmap-table" style="width: 100%; text-align: center;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left; padding: 10px;">Keyword / Document</th>
+                                    {% for col in table_data['col_labels'] %}
+                                    <th style="padding: 10px;"
+                                        title="Document ID: {{ col.split(':')[-1] if ':' in col else col }}">{{ col }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in table_data['table_rows'] %}
+                                <tr>
+                                    <td class="heatmap-row-label"
+                                        style="text-align: left; padding: 10px; font-weight: bold;">{{ row.keyword }}</td>
+                                    {% for cell in row.cells %}
+                                    {% if table_data['max_val'] != table_data['min_val'] %}
+                                    {% set frac = (cell.value - table_data['min_val']) / (table_data['max_val'] -
+                                    table_data['min_val']) %}
+                                    {% else %}
+                                    {% set frac = 0 %}
+                                    {% endif %}
+                                    {% set is_high = frac > 0.5 %}
+                                    <td class="heatmap-cell {% if is_high %}heatmap-cell--high{% endif %}"
+                                        style="background-color: rgba(34, 197, 94, {{ '%.3f'|format(frac) }}); padding: 10px; border: 1px solid var(--border-subtle); color: {% if is_high %}#fff{% else %}var(--text-main){% endif %};"
+                                        title="Similarity: {{ (cell.value * 100) | round(2) }}%">
+                                        {{ (cell.value * 100) | round(1) }}%
+                                    </td>
+                                    {% endfor %}
+                                </tr>
                                 {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in table_data['table_rows'] %}
-                            <tr>
-                                <td class="heatmap-row-label"
-                                    style="text-align: left; padding: 10px; font-weight: bold;">{{ row.keyword }}</td>
-                                {% for cell in row.cells %}
-                                {% if table_data['max_val'] != table_data['min_val'] %}
-                                {% set frac = (cell.value - table_data['min_val']) / (table_data['max_val'] -
-                                table_data['min_val']) %}
-                                {% else %}
-                                {% set frac = 0 %}
-                                {% endif %}
-                                {% set is_high = frac > 0.5 %}
-                                <td class="heatmap-cell {% if is_high %}heatmap-cell--high{% endif %}"
-                                    style="background-color: rgba(34, 197, 94, {{ '%.3f'|format(frac) }}); padding: 10px; border: 1px solid var(--border-subtle); color: {% if is_high %}#fff{% else %}var(--text-main){% endif %};"
-                                    title="Similarity: {{ (cell.value * 100) | round(2) }}%">
-                                    {{ (cell.value * 100) | round(1) }}%
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                {% include "_heatmap_mobile_cards.html" %}
                 {% else %}
                 <p class="empty-state">
                     Not enough data to build a matrix. You need both keywords and stage 1 matches.
