@@ -59,7 +59,12 @@
 
         {% if researchers and researchers|length > 0 %}
         <div class="table-wrapper">
-            <table class="table table--stacked" id="researchersTable">
+            <table
+                class="table table--stacked"
+                id="researchersTable"
+                data-datatable="true"
+                data-datatable-order="0,desc"
+            >
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -167,10 +172,6 @@
 <script src="{{ url_for('static', filename='js/manage_researchers.js') }}"></script>
 <script>
     $(document).ready(function () {
-        $('#researchersTable').DataTable({
-            "order": [[0, "desc"]]
-        });
-
         const bindAccountActionConfirm = (selector, configBuilder) => {
             $(document).on('submit', selector, function (e) {
                 e.preventDefault();

@@ -26,7 +26,12 @@
 
         {% if documents and documents|length > 0 %}
         <div class="table-wrapper">
-            <table class="table table--stacked" id="documentsTable">
+            <table
+                class="table table--stacked"
+                id="documentsTable"
+                data-datatable="true"
+                data-datatable-order="0,desc"
+            >
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -83,10 +88,6 @@
 {% block extra_scripts %}
 <script>
     $(document).ready(function () {
-        $('#documentsTable').DataTable({
-            "order": [[0, "desc"]]
-        });
-
         $('.js-delete-document-form').on('submit', function (e) {
             e.preventDefault();
             const form = this;

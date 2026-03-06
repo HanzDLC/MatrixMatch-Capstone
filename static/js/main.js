@@ -29,6 +29,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    const initializeDataTables = () => {
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
+            return;
+        }
+
+        document.querySelectorAll('table[data-datatable="true"]').forEach((table) => {
+            if (window.jQuery.fn.DataTable.isDataTable(table)) {
+                return;
+            }
+
+            const options = {};
+            const orderAttr = (table.dataset.datatableOrder || "").trim();
+            if (orderAttr) {
+                const [columnRaw, directionRaw] = orderAttr.split(",");
+                const columnIndex = Number.parseInt(columnRaw, 10);
+                if (Number.isInteger(columnIndex)) {
+                    const direction = (directionRaw || "asc").trim().toLowerCase() === "desc" ? "desc" : "asc";
+                    options.order = [[columnIndex, direction]];
+                }
+            }
+
+            const emptyMessage = (table.dataset.datatableEmpty || "").trim();
+            if (emptyMessage) {
+                options.language = { emptyTable: emptyMessage };
+            }
+
+            window.jQuery(table).DataTable(options);
+        });
+    };
+
     const preferredTheme = window.matchMedia &&
         window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
@@ -153,10 +183,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    applyResponsiveTableLabels();
     if (window.jQuery) {
+        initializeDataTables();
         window.jQuery(document).on("draw.dt", applyResponsiveTableLabels);
     }
+    applyResponsiveTableLabels();
 
     // --- Custom Confirmation Modal Logic ---
     const confirmModal = document.getElementById("confirmModal");

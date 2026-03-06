@@ -23,7 +23,13 @@
         </div>
         <div class="card__body card__body--logs">
             <div class="table-wrapper table-wrapper--logs">
-                <table id="logsTable" class="table table--stacked table--logs">
+                <table
+                    id="logsTable"
+                    class="table table--stacked table--logs"
+                    data-datatable="true"
+                    data-datatable-order="2,desc"
+                    data-datatable-empty="No logs found."
+                >
                     <thead>
                         <tr>
                             <th scope="col">Log ID</th>
@@ -65,17 +71,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-    $(document).ready(function () {
-        $('#logsTable').DataTable({
-            "order": [[2, "desc"]],
-            "language": {
-                "emptyTable": "No logs found."
-            }
-        });
-    });
-</script>
 {% endblock %}

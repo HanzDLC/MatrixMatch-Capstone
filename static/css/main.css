@@ -1455,6 +1455,11 @@ body[data-theme="dark"] .status-pill--danger {
     gap: 6px;
 }
 
+.actions-group--single {
+    max-width: 240px;
+    margin: 0 auto;
+}
+
 .inline-form {
     display: inline;
 }
@@ -2664,6 +2669,11 @@ body[data-theme="dark"] .landing-hero {
         margin: 0 auto;
     }
 
+    .table--stacked .actions-group--single {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 220px;
+    }
+
     .table--stacked .actions-group--document {
         grid-template-columns: minmax(0, 1fr);
         max-width: 240px;
@@ -2826,6 +2836,10 @@ body[data-theme="dark"] .landing-hero {
         gap: 7px;
         grid-template-columns: minmax(0, 1fr);
         max-width: 280px;
+    }
+
+    .table--stacked .actions-group--single {
+        max-width: 220px;
     }
 
     .table--stacked .actions-group--document {

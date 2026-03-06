@@ -26,7 +26,12 @@
         </div>
 
         <div class="table-wrapper">
-            <table class="table table--stacked" id="historyTable">
+            <table
+                class="table table--stacked"
+                id="historyTable"
+                data-datatable="true"
+                data-datatable-order="0,desc"
+            >
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -51,11 +56,13 @@
                             -
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ url_for('history_detail', history_id=row.history_id) }}"
-                                class="btn btn-ghost btn-sm">
-                                View Detail
-                            </a>
+                        <td class="table__actions">
+                            <div class="actions-group actions-group--single">
+                                <a href="{{ url_for('history_detail', history_id=row.history_id) }}"
+                                    class="btn btn-ghost btn-sm">
+                                    View Detail
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -64,14 +71,4 @@
         </div>
     </section>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-    $(document).ready(function () {
-        $('#historyTable').DataTable({
-            "order": [[0, "desc"]]
-        });
-    });
-</script>
 {% endblock %}
