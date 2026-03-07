@@ -743,16 +743,22 @@ def register_routes(app):
     @app.route("/api/online_users", methods=["GET"])
     @login_required
     def api_online_users():
-        # Return users active in the last 5 minutes
-        online = users_repo.get_online_users(minutes=5)
+        current_user_id = session.get("user_id")
+        # Return all users with their calculated online presence (last 5 minutes)
+        all_presence = users_repo.get_users_presence(minutes=5)
+        
         # Format for JSON response
         result = []
-        for user in online:
+        for user in all_presence:
+            if user["researcher_id"] == current_user_id:
+                continue # Don't list the current user in the sidebar
+                
             result.append({
                 "id": user["researcher_id"],
                 "name": f"{user['first_name']} {user['last_name']}",
                 "role": user["role"],
                 "profile_pic": user.get("profile_pic"),
+                "is_online": user.get("is_online", False),
                 # Include initials for frontend fallback computation
                 "initials": f"{(user['first_name'] or 'U')[:1]}{(user['last_name'] or '')[:1]}"
             })

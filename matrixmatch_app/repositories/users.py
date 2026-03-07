@@ -179,3 +179,17 @@ def get_online_users(minutes: int = 5):
             (minutes,),
         )
         return cursor.fetchall()
+
+def get_users_presence(minutes: int = 5):
+    with db_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT researcher_id, first_name, last_name, role, profile_pic, 
+                   last_seen,
+                   (last_seen >= NOW() - INTERVAL '1 minute' * %s) as is_online
+            FROM matrixmatch."user"
+            ORDER BY is_online DESC, first_name ASC
+            """,
+            (minutes,),
+        )
+        return cursor.fetchall()

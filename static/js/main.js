@@ -505,47 +505,76 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- Online Users Polling ---
+    // --- Sidebar Users Polling & Search ---
     const onlineUsersList = document.getElementById("onlineUsersList");
+    const sidebarUserSearch = document.getElementById("sidebarUserSearch");
+
     if (onlineUsersList) {
+        let allSidebarUsers = []; // Store fetched users for local filtering
+
+        const renderSidebarUsers = (filterText = "") => {
+            if (allSidebarUsers.length === 0) {
+                onlineUsersList.innerHTML = '<li style="font-size: 0.8rem; color: var(--text-soft); padding: 0 8px;">No users found.</li>';
+                return;
+            }
+
+            const lowerFilter = filterText.toLowerCase();
+            const filteredUsers = allSidebarUsers.filter(user => user.name.toLowerCase().includes(lowerFilter));
+
+            if (filteredUsers.length === 0) {
+                onlineUsersList.innerHTML = '<li style="font-size: 0.8rem; color: var(--text-soft); padding: 0 8px;">No matches found.</li>';
+                return;
+            }
+
+            onlineUsersList.innerHTML = filteredUsers.map(user => {
+                const avatarContent = user.profile_pic
+                    ? `<img src="/static/img/uploads/profiles/${user.profile_pic}?v=1" alt="${user.name}">`
+                    : user.initials;
+
+                const badge = user.role === 'Admin'
+                    ? `<span class="online-user-role-badge">Admin</span>`
+                    : '';
+
+                // Green for online, gray for offline
+                const dotColor = user.is_online ? "#12b76a" : "#747f8d";
+                const dotShadow = user.is_online ? "0 0 3px rgba(18,183,106,0.5)" : "none";
+
+                return `
+                    <li class="online-user-item" onclick="window.openChatHead(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.profile_pic || ''}', '${user.initials}')" style="cursor: pointer; opacity: ${user.is_online ? '1' : '0.65'};">
+                        <div class="online-user-avatar" style="${!user.is_online ? 'filter: grayscale(1);' : ''}">
+                            ${avatarContent}
+                            <div class="online-user-dot" style="background: ${dotColor}; box-shadow: ${dotShadow}; border-color: ${user.is_online ? 'var(--bg-card)' : 'var(--bg-main)'};"></div>
+                        </div>
+                        <div class="online-user-name">
+                            ${user.name}
+                            ${badge}
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        };
+
         const fetchOnlineUsers = () => {
             fetch("/api/online_users")
                 .then(res => res.json())
                 .then(data => {
-                    const users = data.online_users || [];
-                    if (users.length === 0) {
-                        onlineUsersList.innerHTML = '<li style="font-size: 0.8rem; color: var(--text-soft); padding: 0 8px;">No one is online.</li>';
-                        return;
-                    }
-                    onlineUsersList.innerHTML = users.map(user => {
-                        const avatarContent = user.profile_pic
-                            ? `<img src="/static/img/uploads/profiles/${user.profile_pic}?v=1" alt="${user.name}">`
-                            : user.initials;
-
-                        const badge = user.role === 'Admin'
-                            ? `<span class="online-user-role-badge">Admin</span>`
-                            : '';
-
-                        return `
-                            <li class="online-user-item" onclick="window.openChatHead(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.profile_pic || ''}', '${user.initials}')" style="cursor: pointer;">
-                                <div class="online-user-avatar">
-                                    ${avatarContent}
-                                    <div class="online-user-dot"></div>
-                                </div>
-                                <div class="online-user-name">
-                                    ${user.name}
-                                    ${badge}
-                                </div>
-                            </li>
-                        `;
-                    }).join('');
+                    allSidebarUsers = data.online_users || [];
+                    // Render using the current search filter
+                    const currentFilter = sidebarUserSearch ? sidebarUserSearch.value : "";
+                    renderSidebarUsers(currentFilter);
                 })
-                .catch(err => console.error("Could not fetch online users:", err));
+                .catch(err => console.error("Could not fetch sidebar users:", err));
         };
 
-        // Fetch immediately, then poll every 30 seconds
+        if (sidebarUserSearch) {
+            sidebarUserSearch.addEventListener('input', (e) => {
+                renderSidebarUsers(e.target.value);
+            });
+        }
+
+        // Fetch immediately, then poll every 60 seconds (slower polling for full list)
         fetchOnlineUsers();
-        setInterval(fetchOnlineUsers, 30000);
+        setInterval(fetchOnlineUsers, 60000);
     }
 });
 
