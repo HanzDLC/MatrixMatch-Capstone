@@ -151,11 +151,12 @@ def register_routes(app):
 
         first_name = request.form.get("first_name", "")
         last_name = request.form.get("last_name", "")
+        old_password = request.form.get("old_password", "")
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
 
         success, message = auth_service.update_profile(
-            user["id"], first_name, last_name, password, confirm_password
+            user["id"], first_name, last_name, old_password, password, confirm_password
         )
 
         if success:
@@ -615,6 +616,34 @@ def register_routes(app):
             user=get_current_user(),
             logs=logs,
         )
+
+    @app.route("/comparison/extract", methods=["POST"])
+    @login_required
+    def comparison_extract_document():
+        if "file" not in request.files:
+            return {"error": "No file uploaded"}, 400
+        file = request.files["file"]
+        if not file or not file.filename:
+            return {"error": "No selected file"}, 400
+        file_data = file.read()
+        success, message, data = document_service.extract_document_info(file_data, file.filename)
+        if success:
+            import re
+            from collections import Counter
+            
+            combined_text = (data.get("title", "") + " " + data.get("abstract", "")).lower()
+            words = re.findall(r'\b[a-z]{4,}\b', combined_text)
+            stopwords = {"this", "that", "with", "from", "which", "were", "study", "research", "system", "using", "based", "results", "data", "analysis"}
+            filtered_words = [w for w in words if w not in stopwords]
+            top_words = [word for word, count in Counter(filtered_words).most_common(5)]
+            
+            return {
+                "title": data.get("title", ""),
+                "abstract": data.get("abstract", ""),
+                "keywords": top_words
+            }, 200
+        else:
+            return {"error": message}, 400
 
     @app.route("/admin/documents/extract", methods=["POST"])
     @role_required("Admin")

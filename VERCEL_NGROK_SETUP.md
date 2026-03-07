@@ -7,7 +7,7 @@ This project is still a server-rendered Flask app, so Vercel is configured here 
 1. Start Flask locally on a fixed port, for example:
    `gunicorn --bind 0.0.0.0:8000 app:app`
 2. Start ngrok against that port:
-   `ngrok http 8000`
+   `ngrok http 5000`
 3. Copy the HTTPS forwarding URL from ngrok.
 
 ## Vercel

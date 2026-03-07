@@ -49,11 +49,13 @@ def update_profile(
     user_id: int,
     first_name: str,
     last_name: str,
+    old_password: str,
     new_password: str,
     confirm_password: str
 ) -> Tuple[bool, Tuple[str, str]]:
     first_name = (first_name or "").strip()
     last_name = (last_name or "").strip()
+    old_password = (old_password or "").strip()
     new_password = (new_password or "").strip()
     confirm_password = (confirm_password or "").strip()
 
@@ -61,6 +63,17 @@ def update_profile(
         return False, ("First name and last name are required.", "danger")
 
     if new_password:
+        if not old_password:
+            return False, ("Current password is required to set a new password.", "danger")
+        
+        user_info = users.get_user_by_id(user_id)
+        if not user_info:
+            return False, ("User not found.", "danger")
+            
+        authenticated_user = users.get_user_by_credentials(user_info["email"], old_password)
+        if not authenticated_user:
+            return False, ("Incorrect current password.", "danger")
+
         if new_password != confirm_password:
             return False, ("Passwords do not match.", "danger")
         if len(new_password) < 6:

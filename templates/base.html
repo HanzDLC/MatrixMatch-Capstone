@@ -22,6 +22,16 @@
 {% set endpoint = request.endpoint or '' %}
 
 <body data-theme="light">
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem("matrixmatch-theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+                if (theme === "dark") {
+                    document.body.setAttribute("data-theme", "dark");
+                }
+            } catch (e) { }
+        })();
+    </script>
     <div class="app-shell{% if not is_authenticated %} app-shell--public{% endif %}">
         <header class="topbar">
             <div class="topbar__left">
@@ -81,10 +91,7 @@
                         data-icon="VH">
                         View History
                     </a>
-                    <a href="{{ url_for('profile') }}"
-                        class="sidebar__link{% if endpoint == 'profile' %} is-active{% endif %}" data-icon="MP">
-                        My Profile
-                    </a>
+
                     {% endif %}
                 </div>
 
@@ -108,7 +115,8 @@
                 </div>
                 {% endif %}
 
-                <div class="sidebar__footer">
+                <a href="{{ url_for('profile') }}" class="sidebar__footer sidebar__footer-link"
+                    style="text-decoration: none; color: inherit;">
                     <div class="sidebar__avatar">
                         {{ (session.get('first_name') or 'U')[:1] }}{{ (session.get('last_name') or '')[:1] }}
                     </div>
@@ -118,9 +126,10 @@
                         </div>
                         <div class="sidebar__email">{{ session.get('email') }}</div>
                     </div>
-                </div>
+                </a>
             </nav>
-            <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Close navigation" hidden></button>
+            <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Close navigation"
+                hidden></button>
             {% endif %}
 
             <main class="content">

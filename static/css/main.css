@@ -2892,3 +2892,20 @@ body[data-theme="dark"] .landing-hero {
         margin-left: 4px !important;
     }
 }
+
+.sidebar__footer-link {
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-radius 0.2s ease;
+    border-radius: var(--radius-md);
+    padding: 16px 12px 12px;
+    margin: 0 -12px;
+}
+
+.sidebar__footer-link.sidebar__footer {
+    border-top: 1px solid var(--border-main);
+    margin-top: auto;
+}
+
+.sidebar__footer-link:hover {
+    background-color: var(--bg-muted);
+}

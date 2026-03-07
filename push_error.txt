@@ -1,0 +1,76 @@
+﻿git : remote: error: GH013: 
+Repository rule violations 
+found for refs/heads/main.      
+  
+At line:1 char:1
++ git push origin main 2>&1 | 
+Out-File -FilePath 
+push_error.txt -Encodi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : N 
+   otSpecified: (remote: error  
+  : ...s/main.        :String   
+ ) [], RemoteException
+    + FullyQualifiedErrorId : N 
+   ativeCommandError
+ 
+remote: 
+remote: - GITHUB PUSH 
+PROTECTION        
+remote:   ΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓ
+ÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇö
+ΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇ
+öΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓ
+ÇöΓÇö        
+remote:     Resolve the 
+following violations before 
+pushing again        
+remote: 
+remote:     - Push cannot 
+contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to 
+resolve a blocked push        
+remote:      https://docs.github
+.com/code-security/secret-scanni
+ng/working-with-secret-scanning-
+and-push-protection/working-with
+-push-protection-from-the-comman
+d-line#resolving-a-blocked-push 
+       
+remote:             
+remote:             
+remote:       ΓÇöΓÇö Supabase 
+Secret Key ΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇö
+ΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇ
+öΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓÇöΓ
+ÇöΓÇöΓÇö        
+remote:        locations:       
+ 
+remote:          - commit: 41d98
+485417c71bff532cd36754e87250f6d7
+fdf        
+remote:            path: 
+.env.example:1        
+remote:             
+remote:        (?) To push, 
+remove secret from commit(s) or 
+follow this URL to allow the 
+secret.        
+remote:        https://github.co
+m/HanzDLC/MatrixMatch-Capstone/s
+ecurity/secret-scanning/unblock-
+secret/3Aa1ach5eH4fx7BMeM9CRUmLM
+Fx        
+remote:             
+remote: 
+remote: 
+To https://github.com/HanzDLC/Ma
+trixMatch-Capstone
+ ! [remote rejected] main -> 
+main (push declined due to 
+repository rule violations)
+error: failed to push some refs 
+to 'https://github.com/HanzDLC/M
+atrixMatch-Capstone'
