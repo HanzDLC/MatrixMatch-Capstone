@@ -192,6 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Document Alerts Logic ---
     const notifBtn = document.getElementById("notif-btn-toggle");
     const notifDot = notifBtn ? notifBtn.querySelector(".notif-btn__dot") : null;
+    const notifDropdown = document.getElementById("notificationsDropdown");
     const markAllReadBtn = document.getElementById("markAllReadBtn");
     const notificationsList = document.getElementById("notificationsList");
 
