@@ -173,7 +173,7 @@ def get_online_users(minutes: int = 5):
             """
             SELECT researcher_id, first_name, last_name, role, profile_pic, last_seen
             FROM matrixmatch."user"
-            WHERE last_seen >= NOW() - INTERVAL '%s minutes'
+            WHERE last_seen >= NOW() - INTERVAL '1 minute' * %s
             ORDER BY last_seen DESC
             """,
             (minutes,),
