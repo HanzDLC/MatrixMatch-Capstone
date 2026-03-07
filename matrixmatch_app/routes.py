@@ -635,7 +635,7 @@ def register_routes(app):
             words = re.findall(r'\b[a-z]{4,}\b', combined_text)
             stopwords = {"this", "that", "with", "from", "which", "were", "study", "research", "system", "using", "based", "results", "data", "analysis"}
             filtered_words = [w for w in words if w not in stopwords]
-            top_words = [word for word, count in Counter(filtered_words).most_common(5)]
+            top_words = [word for word, count in Counter(filtered_words).most_common(15)]
             
             return {
                 "title": data.get("title", ""),
