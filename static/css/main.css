@@ -3321,7 +3321,7 @@ body[data-theme="dark"] .landing-hero {
 
 .chat-bubble.sent {
     align-self: flex-end;
-    background: var(--accent-main);
+    background: #0084ff;
     color: white;
     border-bottom-right-radius: 4px;
 }
