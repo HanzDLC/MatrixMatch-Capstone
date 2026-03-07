@@ -186,10 +186,10 @@ def get_users_presence(minutes: int = 5):
             """
             SELECT researcher_id, first_name, last_name, role, profile_pic, 
                    last_seen,
-                   (last_seen >= NOW() - INTERVAL '1 minute' * %s) as is_online
+                   COALESCE((last_seen >= NOW() - INTERVAL '1 minute' * %s), false) as is_online
             FROM matrixmatch."user"
-            ORDER BY is_online DESC, first_name ASC
+            ORDER BY COALESCE((last_seen >= NOW() - INTERVAL '1 minute' * %s), false) DESC, first_name ASC
             """,
-            (minutes,),
+            (minutes, minutes),
         )
         return cursor.fetchall()
