@@ -58,11 +58,7 @@
                                 <tr>
                                     <td class="heatmap-row-label">{{ row.keyword }}</td>
                                     {% for cell in row.cells %}
-                                    {% if max_val != min_val %}
-                                    {% set frac = (cell.value - min_val) / (max_val - min_val) %}
-                                    {% else %}
-                                    {% set frac = 0 %}
-                                    {% endif %}
+                                    {% set frac = cell.value %}
                                     <td class="heatmap-cell"
                                         style="background-color: hsl({{ '%.0f'|format(frac * 120) }}, 85%, 65%); color: #0f172a; font-weight: 600;"
                                         title="Similarity: {{ (cell.value * 100) | round(2) }}%">

@@ -189,6 +189,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyResponsiveTableLabels();
 
+    // --- Document Alerts Logic ---
+    const notifBtn = document.querySelector(".notif-btn");
+    const notifDot = document.querySelector(".notif-btn__dot");
+
+    if (notifBtn && notifDot) {
+        // Initially hide dot to prevent false positives
+        notifDot.style.display = "none";
+
+        fetch("/api/alerts")
+            .then(res => {
+                if (!res.ok) throw new Error("API not okay");
+                return res.json();
+            })
+            .then(data => {
+                const storedId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
+                if (data.latest_log_id > storedId && data.recent_documents.length > 0) {
+                    notifDot.style.display = "block";
+                }
+
+                notifBtn.addEventListener("click", () => {
+                    notifDot.style.display = "none";
+                    if (data.latest_log_id > storedId) {
+                        localStorage.setItem("matrixmatch_last_alert_id", data.latest_log_id.toString());
+                    }
+
+                    if (data.recent_documents && data.recent_documents.length > 0) {
+                        const docList = data.recent_documents.map(d => `<li><strong>${d}</strong></li>`).join("");
+                        Swal.fire({
+                            title: "New Documents Added",
+                            html: `Since you last checked, the following documents were added to our database:<br><br><ul style="text-align: left; font-size: 0.92rem; margin: 0; padding-left: 20px;">${docList}</ul>`,
+                            icon: "info",
+                            confirmButtonText: "Awesome",
+                            confirmButtonColor: "#1ea6f6"
+                        });
+                    } else {
+                        Swal.fire({
+                            title: "You're all caught up!",
+                            text: "No new documents have been added since your last visit.",
+                            icon: "success",
+                            confirmButtonText: "Close",
+                            confirmButtonColor: "#12b76a"
+                        });
+                    }
+                });
+            })
+            .catch(err => {
+                console.error("Failed to fetch alerts", err);
+                notifBtn.addEventListener("click", () => {
+                    Swal.fire({
+                        title: "No New Documents",
+                        text: "You're all caught up!",
+                        icon: "success",
+                        confirmButtonText: "Close",
+                        confirmButtonColor: "#1ea6f6"
+                    });
+                });
+            });
+    }
+
     // --- Custom Confirmation Modal Logic ---
     const confirmModal = document.getElementById("confirmModal");
     const confirmModalTitle = document.getElementById("confirmModalTitle");

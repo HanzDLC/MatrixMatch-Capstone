@@ -15,11 +15,7 @@
         <div class="heatmap-mobile-rows">
             {% for row in heatmap_rows %}
             {% set cell = row.cells[col_idx] %}
-            {% if heatmap_max != heatmap_min %}
-            {% set frac = (cell.value - heatmap_min) / (heatmap_max - heatmap_min) %}
-            {% else %}
-            {% set frac = 0 %}
-            {% endif %}
+            {% set frac = cell.value %}
             <div class="heatmap-mobile-row">
                 <div class="heatmap-mobile-row__meta">
                     <span class="heatmap-mobile-row__label">{{ row.keyword }}</span>
