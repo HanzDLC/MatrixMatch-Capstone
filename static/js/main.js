@@ -322,9 +322,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const fontWeight = isUnread ? '700' : '400';
                 const color = isUnread ? 'var(--text-main)' : 'var(--text-soft)';
 
+                const safeName = `${conv.first_name} ${conv.last_name}`.replace(/'/g, "\\'");
+
                 return `
-                    <a href="/messages" style="text-decoration:none; color:inherit; display:block;">
-                        <div class="notifications-item">
+                        <div class="notifications-item" onclick="window.openChatHead(${conv.other_user_id}, '${safeName}', '${conv.profile_pic || ''}', '${conv.initials}')" style="cursor: pointer;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width:36px; height:36px; border-radius:50%; background:var(--accent-main); color:white; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700;">
                                     ${avatar}
@@ -338,7 +339,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 ${isUnread ? '<div style="width:8px; height:8px; border-radius:50%; background:var(--error-main);"></div>' : ''}
                             </div>
                         </div>
-                    </a>
                 `;
             }).join('');
         };
