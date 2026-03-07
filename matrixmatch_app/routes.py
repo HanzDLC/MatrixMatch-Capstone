@@ -5,7 +5,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from matrixmatch_app.auth import get_current_user, login_required, role_required
 from matrixmatch_app.parsers import parse_keywords
-from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo, users as users_repo
+from matrixmatch_app.repositories import history as history_repo, document_logs as document_logs_repo, users as users_repo, messages as messages_repo
 from matrixmatch_app.services import admin_service, auth_service, comparison_service, dashboard_service, document_service
 
 logger = logging.getLogger(__name__)

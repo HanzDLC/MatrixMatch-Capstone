@@ -300,6 +300,96 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- Messages Dropdown Logic ---
+    const msgBtn = document.getElementById("msg-btn-toggle");
+    const msgDot = document.getElementById("msgDot");
+    const msgDropdown = document.getElementById("messagesDropdown");
+    const recentMessagesList = document.getElementById("recentMessagesList");
+
+    if (msgBtn && msgDropdown) {
+        const renderMessages = (conversations) => {
+            if (!conversations || conversations.length === 0) {
+                recentMessagesList.innerHTML = '<div class="notifications-empty">No conversations yet</div>';
+                return;
+            }
+
+            recentMessagesList.innerHTML = conversations.map(conv => {
+                const avatar = conv.profile_pic
+                    ? `<img src="/static/img/uploads/profiles/${conv.profile_pic}?v=1" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+                    : `${conv.initials}`;
+
+                const isUnread = !conv.is_read && !conv.was_sent_by_me;
+                const fontWeight = isUnread ? '700' : '400';
+                const color = isUnread ? 'var(--text-main)' : 'var(--text-soft)';
+
+                return `
+                    <a href="/messages" style="text-decoration:none; color:inherit; display:block;">
+                        <div class="notifications-item">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width:36px; height:36px; border-radius:50%; background:var(--accent-main); color:white; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700;">
+                                    ${avatar}
+                                </div>
+                                <div style="flex: 1; overflow:hidden;">
+                                    <div class="notifications-item__title" style="font-weight:600;">${conv.first_name} ${conv.last_name}</div>
+                                    <div class="notifications-item__title" style="font-weight: ${fontWeight}; color: ${color}; font-size: 0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        ${conv.was_sent_by_me ? 'You: ' : ''}${conv.latest_message}
+                                    </div>
+                                </div>
+                                ${isUnread ? '<div style="width:8px; height:8px; border-radius:50%; background:var(--error-main);"></div>' : ''}
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        };
+
+        const fetchRecentMessages = () => {
+            fetch("/api/messages/recent")
+                .then(res => res.json())
+                .then(data => {
+                    if (msgDot) {
+                        msgDot.style.display = data.unread_count > 0 ? "flex" : "none";
+                        msgDot.textContent = data.unread_count > 0 ? data.unread_count : "";
+                    }
+                    renderMessages(data.conversations || []);
+                })
+                .catch(err => console.error("Failed to fetch recent messages", err));
+        };
+
+        // Fetch immediately and poll every 15s
+        fetchRecentMessages();
+        setInterval(fetchRecentMessages, 15000);
+
+        // Toggle dropdown
+        msgBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = msgDropdown.classList.contains("is-open");
+            if (!isOpen) {
+                msgDropdown.classList.add("is-open");
+                msgDropdown.setAttribute("aria-hidden", "false");
+                fetchRecentMessages(); // Refresh on open
+
+                // Close the Alerts list to prevent overlapping UI
+                const notifDropdown = document.getElementById("notificationsDropdown");
+                if (notifDropdown) {
+                    notifDropdown.classList.remove("is-open");
+                    notifDropdown.setAttribute("aria-hidden", "true");
+                }
+            } else {
+                msgDropdown.classList.remove("is-open");
+                msgDropdown.setAttribute("aria-hidden", "true");
+            }
+        });
+
+        // Close when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!msgBtn.contains(e.target) && !msgDropdown.contains(e.target)) {
+                msgDropdown.classList.remove("is-open");
+                msgDropdown.setAttribute("aria-hidden", "true");
+            }
+        });
+    }
+
     // --- Custom Confirmation Modal Logic ---
     // --- Profile Picture Upload Logic ---
     const avatarTrigger = document.getElementById("avatarUploadTrigger");

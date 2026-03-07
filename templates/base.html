@@ -45,6 +45,29 @@
             </div>
             <div class="topbar__right">
                 {% if is_authenticated %}
+                <!-- Messages Dropdown -->
+                <div style="position: relative; margin-right: 8px;">
+                    <button type="button" class="icon-button notif-btn" aria-label="Messages" id="msg-btn-toggle">
+                        <span style="font-size: 1.1rem;">💬</span>
+                        <span class="notif-btn__dot" id="msgDot"
+                            style="display: none; background: var(--error-main);"></span>
+                    </button>
+                    <div class="notifications-dropdown" id="messagesDropdown" aria-hidden="true" style="width: 320px;">
+                        <div class="notifications-dropdown__header">
+                            <h3 class="notifications-dropdown__title">Messages</h3>
+                        </div>
+                        <div class="notifications-dropdown__body" id="recentMessagesList"
+                            style="max-height: 250px; overflow-y: auto;">
+                            <div class="notifications-empty">Loading messages...</div>
+                        </div>
+                        <div style="padding: 10px; text-align: center; border-top: 1px solid var(--border-main);">
+                            <a href="{{ url_for('messages_page') }}"
+                                style="color: var(--accent-main); font-size: 0.9rem; font-weight: 500; text-decoration: none;">See
+                                all in Messenger</a>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="position: relative;">
                     <button type="button" class="icon-button notif-btn" aria-label="Notifications"
                         id="notif-btn-toggle">

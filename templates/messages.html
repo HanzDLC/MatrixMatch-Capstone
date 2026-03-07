@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Messages - MatrixMatch{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="messenger-layout">
+        <!-- Sidebar -->
+        <div class="messenger-sidebar">
+            <div class="messenger-sidebar__header">
+                <h3 style="margin:0; font-size:1.2rem;">Conversations</h3>
+            </div>
+            <div class="messenger-sidebar__list" id="conversationList">
+                {% for u in other_users %}
+                <div class="msg-thread-item" data-other-id="{{ u.researcher_id }}"
+                    data-other-name="{{ u.first_name }} {{ u.last_name }}">
+                    <div class="online-user-avatar">
+                        {% if u.profile_pic %}
+                        <img src="{{ url_for('static', filename='img/uploads/profiles/' + u.profile_pic) }}?v=1"
+                            alt="Profile">
+                        {% else %}
+                        {{ (u.first_name or 'U')[:1] }}{{ (u.last_name or '')[:1] }}
+                        {% endif %}
+                    </div>
+                    <div class="msg-thread-info">
+                        <div class="msg-thread-name">{{ u.first_name }} {{ u.last_name }}</div>
+                        <div class="msg-thread-preview">Click to chat</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="messenger-chat">
+            <div class="messenger-chat__header" id="chatHeader" style="display:none;">
+                <div class="online-user-avatar" id="activeChatAvatar"></div>
+                <h3 style="margin:0;" id="activeChatName">Loading...</h3>
+            </div>
+
+            <div class="messenger-chat__body" id="chatBody">
+                <div style="margin:auto; color:var(--text-soft); text-align:center;">
+                    <div style="font-size:3rem; margin-bottom:1rem;">💬</div>
+                    Select a conversation to start messaging
+                </div>
+            </div>
+
+            <div class="messenger-chat__input" id="chatInputArea" style="display:none;">
+                <input type="text" id="messageInput" class="form-input" placeholder="Type a message..." disabled>
+                <button type="button" id="sendMessageBtn" class="btn btn-primary" disabled>Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // In-page messaging logic handling individual chat thread switching and live-polling
+    const currentUserId = {{ session.get('user_id') }};
+</script>
+<script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+{% endblock %}

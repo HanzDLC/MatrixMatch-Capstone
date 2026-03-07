@@ -3175,3 +3175,136 @@ body[data-theme="dark"] .landing-hero {
     width: 100%;
     gap: 8px;
 }
+
+/* Messenger Page */
+.messenger-layout {
+    display: flex;
+    height: calc(100vh - 120px);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    overflow: hidden;
+    border: 1px solid var(--border-main);
+}
+.messenger-sidebar {
+    width: 300px;
+    border-right: 1px solid var(--border-main);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card-strong);
+}
+.messenger-sidebar__header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-main);
+}
+.messenger-sidebar__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+.msg-thread-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.msg-thread-item:hover, .msg-thread-item.is-active {
+    background: rgba(30,166,246,0.1);
+}
+.msg-thread-item.unread .msg-thread-preview {
+    font-weight: 700;
+    color: var(--text-main);
+}
+.msg-thread-info {
+    flex: 1;
+    overflow: hidden;
+}
+.msg-thread-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+.msg-thread-preview {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.messenger-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-main);
+}
+.messenger-chat__header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-main);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.messenger-chat__body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.chat-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.chat-bubble.sent {
+    align-self: flex-end;
+    background: var(--accent-main);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble.received {
+    align-self: flex-start;
+    background: var(--bg-card-strong);
+    color: var(--text-main);
+    border-bottom-left-radius: 4px;
+}
+.chat-timestamp {
+    font-size: 0.7rem;
+    color: var(--text-soft);
+    margin-top: 4px;
+    align-self: flex-end;
+}
+.chat-bubble.received + .chat-timestamp {
+    align-self: flex-start;
+}
+.messenger-chat__input {
+    padding: 20px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-main);
+    display: flex;
+    gap: 10px;
+}
+.messenger-chat__input input {
+    flex: 1;
+    border-radius: 20px;
+}
+
+/* Messages Unread Dot styling update */
+#msgDot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    width: 14px;
+    height: 14px;
+    right: 4px;
+    top: 4px;
+}
