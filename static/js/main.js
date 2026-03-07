@@ -513,17 +513,15 @@ document.addEventListener("DOMContentLoaded", () => {
                             : '';
 
                         return `
-                            <li class="online-user-item" style="padding: 0;">
-                                <a href="/messages" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; text-decoration: none; color: inherit; border-radius: var(--radius-sm);">
-                                    <div class="online-user-avatar">
-                                        ${avatarContent}
-                                        <div class="online-user-dot"></div>
-                                    </div>
-                                    <div class="online-user-name">
-                                        ${user.name}
-                                        ${badge}
-                                    </div>
-                                </a>
+                            <li class="online-user-item" onclick="window.location.href='/messages'" style="cursor: pointer;">
+                                <div class="online-user-avatar">
+                                    ${avatarContent}
+                                    <div class="online-user-dot"></div>
+                                </div>
+                                <div class="online-user-name">
+                                    ${user.name}
+                                    ${badge}
+                                </div>
                             </li>
                         `;
                     }).join('');
