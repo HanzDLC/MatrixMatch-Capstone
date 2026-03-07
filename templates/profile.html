@@ -9,6 +9,30 @@
             <p class="page-subtitle">Update your personal information and account security.</p>
         </div>
     </div>
+
+    <div class="profile-avatar-container">
+        <div class="profile-avatar-wrapper" id="avatarUploadTrigger">
+            <div class="profile-avatar-box">
+                {% if session.get('profile_pic') %}
+                <img src="{{ url_for('static', filename='img/uploads/profiles/' + session.get('profile_pic')) }}"
+                    class="profile-avatar-img" id="profileDisplayAvatar" alt="Profile">
+                {% else %}
+                <div class="profile-avatar-initials" id="profileDisplayInitials">
+                    {{ (user.first_name or 'U')[:1] }}{{ (user.last_name or '')[:1] }}
+                </div>
+                {% endif %}
+                <div class="profile-avatar-overlay">
+                    <span class="overlay-text">📷 Change</span>
+                </div>
+            </div>
+            <input type="file" id="profilePicInput" style="display: none;" accept="image/*">
+        </div>
+        <div class="profile-name-header">
+            <h2>{{ user.first_name }} {{ user.last_name }}</h2>
+            <p>{{ user.email }}</p>
+        </div>
+    </div>
+
     <div class="card form-card form-card--compact">
         <form method="post" action="{{ url_for('profile') }}">
             <div class="form-group">
@@ -25,7 +49,8 @@
 
             <hr class="section-divider">
             <h3 class="section-heading">Change Password</h3>
-            <p class="helper-text">To change your password, you must enter your current password. Leave these fields blank if you do not want to change your password.</p>
+            <p class="helper-text">To change your password, you must enter your current password. Leave these fields
+                blank if you do not want to change your password.</p>
 
             <div class="form-group">
                 <label for="old_password" class="form-label">Current Password</label>

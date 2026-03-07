@@ -7,7 +7,7 @@ def get_user_by_credentials(email: str, password: str):
     with db_cursor() as cursor:
         cursor.execute(
             """
-            SELECT researcher_id, first_name, last_name, email, role
+            SELECT researcher_id, first_name, last_name, email, role, profile_pic
             FROM matrixmatch."user"
             WHERE email = %s AND password = %s
             """,
@@ -19,7 +19,7 @@ def get_user_by_credentials(email: str, password: str):
 def get_user_by_email(email: str):
     with db_cursor() as cursor:
         cursor.execute(
-            'SELECT researcher_id, first_name, last_name, email, role FROM matrixmatch."user" WHERE email = %s',
+            'SELECT researcher_id, first_name, last_name, email, role, profile_pic FROM matrixmatch."user" WHERE email = %s',
             (email,),
         )
         return cursor.fetchone()
@@ -48,7 +48,7 @@ def get_user_by_id(user_id: int):
     with db_cursor() as cursor:
         cursor.execute(
             """
-            SELECT researcher_id, first_name, last_name, email, role
+            SELECT researcher_id, first_name, last_name, email, role, profile_pic
             FROM matrixmatch."user"
             WHERE researcher_id = %s
             """,
@@ -143,3 +143,15 @@ def demote_admin_to_researcher(researcher_id: int, protected_email: str) -> bool
             (researcher_id, protected_email),
         )
         return cursor.rowcount > 0
+
+
+def update_profile_pic(user_id: int, filename: str) -> None:
+    with db_cursor(commit=True) as cursor:
+        cursor.execute(
+            """
+            UPDATE matrixmatch."user"
+            SET profile_pic = %s
+            WHERE researcher_id = %s
+            """,
+            (filename, user_id),
+        )

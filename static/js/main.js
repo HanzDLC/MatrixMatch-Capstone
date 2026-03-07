@@ -203,6 +203,21 @@ document.addEventListener("DOMContentLoaded", () => {
         let latestAlertId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
         let hasNewAlerts = false;
 
+        const getRelativeTime = (isoString) => {
+            if (!isoString) return "";
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return "just now";
+            const diffInMinutes = Math.floor(diffInSeconds / 60);
+            if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            if (diffInHours < 24) return `${diffInHours}h ago`;
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `${diffInDays}d ago`;
+        };
+
         const renderNotifications = (docs) => {
             if (!docs || docs.length === 0) {
                 notificationsList.innerHTML = '<div class="notifications-empty">You\'re all caught up!</div>';
@@ -213,9 +228,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="notifications-item">
                     <div style="display: flex; align-items: start;">
                         <span class="notifications-item__icon">📄</span>
-                        <div>
+                        <div style="flex: 1;">
                             <div class="notifications-item__title">New Document Added</div>
-                            <div class="notifications-item__title" style="font-weight: 400; color: var(--text-soft);">"${doc}"</div>
+                            <div class="notifications-item__title" style="font-weight: 400; color: var(--text-soft); font-size: 0.8rem; margin-top: 2px;">"${doc.title}"</div>
+                            <div class="notifications-item__time">${getRelativeTime(doc.timestamp)}</div>
                         </div>
                     </div>
                 </div>
@@ -285,6 +301,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Custom Confirmation Modal Logic ---
+    // --- Profile Picture Upload Logic ---
+    const avatarTrigger = document.getElementById("avatarUploadTrigger");
+    const fileInput = document.getElementById("profilePicInput");
+
+    if (avatarTrigger && fileInput) {
+        avatarTrigger.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", function () {
+            if (this.files && this.files[0]) {
+                const formData = new FormData();
+                formData.append("file", this.files[0]);
+
+                // Show a simple loading state or SweetAlert
+                Swal.fire({
+                    title: 'Uploading...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch("/profile/upload_pic", {
+                    method: "POST",
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'Profile picture updated!',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload(); // Reload to update all avatars
+                            });
+                        } else {
+                            Swal.fire('Error', data.error || 'Upload failed', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire('Error', 'An error occurred during upload', 'error');
+                    });
+            }
+        });
+    }
     const confirmModal = document.getElementById("confirmModal");
     const confirmModalTitle = document.getElementById("confirmModalTitle");
     const confirmModalMessage = document.getElementById("confirmModalMessage");

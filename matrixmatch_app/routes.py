@@ -68,6 +68,7 @@ def register_routes(app):
         session["last_name"] = user["last_name"]
         session["role"] = user["role"]
         session["email"] = user["email"]
+        session["profile_pic"] = user.get("profile_pic")
 
         flash(f"Welcome back, {user['first_name']}!", "success")
         return redirect(url_for("dashboard"))
@@ -170,6 +171,41 @@ def register_routes(app):
             "profile.html",
             user={**user, "first_name": first_name, "last_name": last_name}
         )
+
+    @app.route("/profile/upload_pic", methods=["POST"])
+    @login_required
+    def upload_profile_pic():
+        if "file" not in request.files:
+            return {"error": "No file uploaded"}, 400
+        
+        file = request.files["file"]
+        if not file or not file.filename:
+            return {"error": "No selected file"}, 400
+        
+        # Validate extension
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+        import os
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in allowed_extensions:
+            return {"error": "Invalid file type. Please upload an image (jpg, png, etc.)"}, 400
+        
+        # Save file uniquely
+        import uuid
+        filename = f"profile_{session['user_id']}_{uuid.uuid4().hex[:8]}{ext}"
+        upload_path = os.path.join(app.static_folder, "img", "uploads", "profiles", filename)
+        
+        # Create directory if not exists (extra safety)
+        os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+        
+        file.save(upload_path)
+        
+        # Update DB
+        users_repo.update_profile_pic(session["user_id"], filename)
+        
+        # Update Session
+        session["profile_pic"] = filename
+        
+        return {"success": True, "filename": filename}, 200
 
     @app.route("/admin/dashboard")
     @role_required("Admin")
@@ -662,3 +698,25 @@ def register_routes(app):
             return {"title": data.get("title", ""), "abstract": data.get("abstract", "")}, 200
         else:
             return {"error": message}, 400
+
+    @app.route("/api/alerts", methods=["GET"])
+    @login_required
+    def get_user_alerts():
+        logs = document_logs_repo.get_all_logs()
+        # Filter only added documents
+        added_logs = [log for log in logs if log["action"].lower() == "added"]
+        
+        latest_id = added_logs[0]["log_id"] if added_logs else 0
+        
+        # Return last 5 added documents with titles and timestamps
+        recent_updates = []
+        for log in added_logs[:5]:
+            recent_updates.append({
+                "title": log["document_title"],
+                "timestamp": log["timestamp"].isoformat() if log["timestamp"] else None
+            })
+            
+        return {
+            "latest_log_id": latest_id,
+            "recent_documents": recent_updates
+        }, 200

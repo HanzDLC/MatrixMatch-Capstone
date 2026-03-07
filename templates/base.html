@@ -74,6 +74,10 @@
                     Guest
                     <span class="topbar__role">Guest</span>
                     {% else %}
+                    {% if session.get('profile_pic') %}
+                    <img src="{{ url_for('static', filename='img/uploads/profiles/' + session.get('profile_pic')) }}"
+                        class="topbar__avatar-img" alt="Avatar">
+                    {% endif %}
                     {{ session.get('first_name') }} {{ session.get('last_name') }}
                     <span class="topbar__role">{{ session.get('role') }}</span>
                     {% endif %}
@@ -132,7 +136,12 @@
                 <a href="{{ url_for('profile') }}" class="sidebar__footer sidebar__footer-link"
                     style="text-decoration: none; color: inherit;">
                     <div class="sidebar__avatar">
+                        {% if session.get('profile_pic') %}
+                        <img src="{{ url_for('static', filename='img/uploads/profiles/' + session.get('profile_pic')) }}"
+                            class="sidebar__avatar-img" alt="Profile">
+                        {% else %}
                         {{ (session.get('first_name') or 'U')[:1] }}{{ (session.get('last_name') or '')[:1] }}
+                        {% endif %}
                     </div>
                     <div>
                         <div class="sidebar__name">
