@@ -419,13 +419,20 @@ document.addEventListener("DOMContentLoaded", () => {
                             ? `<img src="/static/img/uploads/profiles/${user.profile_pic}?v=1" alt="${user.name}">`
                             : user.initials;
 
+                        const badge = user.role === 'Admin'
+                            ? `<span class="online-user-role-badge">Admin</span>`
+                            : '';
+
                         return `
                             <li class="online-user-item">
                                 <div class="online-user-avatar">
                                     ${avatarContent}
                                     <div class="online-user-dot"></div>
                                 </div>
-                                <div class="online-user-name">${user.name}</div>
+                                <div class="online-user-name">
+                                    ${user.name}
+                                    ${badge}
+                                </div>
                             </li>
                         `;
                     }).join('');
