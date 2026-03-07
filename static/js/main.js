@@ -352,6 +352,19 @@ document.addEventListener("DOMContentLoaded", () => {
                         msgDot.textContent = data.unread_count > 0 ? data.unread_count : "";
                     }
                     renderMessages(data.conversations || []);
+
+                    // Auto-popup chat heads for new incoming unread messages
+                    if (data.conversations) {
+                        data.conversations.forEach(conv => {
+                            const isUnread = !conv.is_read && !conv.was_sent_by_me;
+                            if (isUnread) {
+                                const existingChat = document.getElementById(`chat-head-${conv.other_user_id}`);
+                                if (!existingChat && typeof window.openChatHead === 'function') {
+                                    window.openChatHead(conv.other_user_id, `${conv.first_name} ${conv.last_name}`, conv.profile_pic, conv.initials);
+                                }
+                            }
+                        });
+                    }
                 })
                 .catch(err => console.error("Failed to fetch recent messages", err));
         };
