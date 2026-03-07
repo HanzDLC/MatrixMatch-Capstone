@@ -267,7 +267,7 @@
                 title: '{{ "Error" if category in ["danger", "error"] else "Warning!" if category == "warning" else "Success!" if category == "success" else "Notice" }}',
                 text: {{ message | tojson }},
             confirmButtonColor: '#1ea6f6'
-                });
+            });
         {% endfor %}
         });
     </script>

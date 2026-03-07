@@ -587,7 +587,16 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
 
     // Check if already open
     const existingChat = document.getElementById(`chat-head-${userId}`);
-    if (existingChat) return;
+    if (existingChat) {
+        // Just focus the input
+        const inputField = existingChat.querySelector(`#chat-input-${userId}`);
+        if (inputField) inputField.focus();
+
+        // Visual cue (brief shake or highlight)
+        existingChat.style.transform = "scale(1.02)";
+        setTimeout(() => existingChat.style.transform = "scale(1)", 200);
+        return;
+    }
 
     const avatarHtml = profilePic
         ? `<img src="/static/img/uploads/profiles/${profilePic}?v=1" alt="${userName}">`
@@ -603,22 +612,54 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
                 <div class="chat-head-avatar">${avatarHtml}</div>
                 <span>${userName}</span>
             </div>
-            <button class="chat-head-close" aria-label="Close chat" title="Close">&times;</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="chat-head-minimize" aria-label="Minimize chat" title="Minimize" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.2rem; line-height: 1; opacity: 0.8; padding: 0;">-</button>
+                <button class="chat-head-close" aria-label="Close chat" title="Close" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.2rem; line-height: 1; opacity: 0.8; padding: 0;">&times;</button>
+            </div>
         </div>
-        <div class="chat-head-messages" id="chat-messages-${userId}">
-            <!-- Messages go here -->
-            <div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
-        </div>
-        <div class="chat-head-input">
-            <input type="text" id="chat-input-${userId}" placeholder="Type a message..." aria-label="Type a message">
+        <div class="chat-head-content" id="chat-content-${userId}" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            <div class="chat-head-messages" id="chat-messages-${userId}">
+                <!-- Messages go here -->
+                <div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
+            </div>
+            <div class="chat-head-input" style="padding: 8px 10px; display: flex; align-items: center; gap: 6px;">
+                <input type="text" id="chat-input-${userId}" placeholder="Type..." aria-label="Type a message" style="flex: 1; min-width: 0;">
+                <button class="chat-head-send-btn" title="Send message" style="background: var(--accent-main); color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">Send</button>
+            </div>
         </div>
     `;
 
     container.appendChild(chatBox);
 
     const messagesContainer = chatBox.querySelector(`#chat-messages-${userId}`);
+    const contentArea = chatBox.querySelector(`#chat-content-${userId}`);
     const closeBtn = chatBox.querySelector(".chat-head-close");
+    const minimizeBtn = chatBox.querySelector(".chat-head-minimize");
+    const sendBtn = chatBox.querySelector(".chat-head-send-btn");
     const inputField = chatBox.querySelector(`#chat-input-${userId}`);
+    const header = chatBox.querySelector(".chat-head-header");
+
+    // Toggle Minimize
+    const toggleMinimize = () => {
+        const isMinimized = contentArea.style.display === "none";
+        contentArea.style.display = isMinimized ? "flex" : "none";
+        chatBox.style.height = isMinimized ? "400px" : "auto";
+        chatBox.style.width = isMinimized ? "320px" : "200px";
+        if (isMinimized) {
+            setTimeout(() => inputField.focus(), 50);
+        }
+    };
+
+    minimizeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleMinimize();
+    });
+
+    header.addEventListener("click", () => {
+        if (contentArea.style.display === "none") {
+            toggleMinimize();
+        }
+    });
 
     // Helper to format timestamps
     const formatTime = (isoString) => {
@@ -670,49 +711,59 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
     });
 
     // Send Message Handler
-    inputField.addEventListener("keypress", (e) => {
-        if (e.key === "Enter" && inputField.value.trim() !== "") {
-            const tempVal = inputField.value.trim();
-            inputField.value = "";
+    const sendMessage = () => {
+        if (inputField.value.trim() === "") return;
 
-            // Optimistic UI update
-            const bubble = document.createElement("div");
-            bubble.className = "chat-bubble sent";
-            bubble.textContent = tempVal;
+        const tempVal = inputField.value.trim();
+        inputField.value = "";
 
-            const time = document.createElement("div");
-            time.className = "chat-timestamp";
-            time.textContent = "Sending...";
+        // Optimistic UI update
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble sent";
+        bubble.textContent = tempVal;
 
-            if (messagesContainer.innerHTML.includes("Start of conversation")) {
-                messagesContainer.innerHTML = '';
-            }
-            messagesContainer.appendChild(bubble);
-            messagesContainer.appendChild(time);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        const time = document.createElement("div");
+        time.className = "chat-timestamp";
+        time.textContent = "Sending...";
 
-            // Transmit API call
-            fetch("/api/messages/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ receiver_id: userId, content: tempVal })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) {
-                        time.textContent = "Failed to send";
-                        time.style.color = "red";
-                    } else {
-                        loadMessages(); // reload ground truth
-                    }
-                })
-                .catch(err => {
-                    console.error("Error sending message:", err);
+        if (messagesContainer.innerHTML.includes("Start of conversation")) {
+            messagesContainer.innerHTML = '';
+        }
+        messagesContainer.appendChild(bubble);
+        messagesContainer.appendChild(time);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Transmit API call
+        fetch("/api/messages/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ receiver_id: userId, content: tempVal })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
                     time.textContent = "Failed to send";
                     time.style.color = "red";
-                });
+                } else {
+                    loadMessages(); // reload ground truth
+                }
+            })
+            .catch(err => {
+                console.error("Error sending message:", err);
+                time.textContent = "Failed to send";
+                time.style.color = "red";
+            });
+    };
+
+    inputField.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            sendMessage();
         }
     });
+
+    if (sendBtn) {
+        sendBtn.addEventListener("click", sendMessage);
+    }
 
     // Focus input automatically
     setTimeout(() => inputField.focus(), 100);

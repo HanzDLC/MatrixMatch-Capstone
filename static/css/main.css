@@ -3485,3 +3485,26 @@ body[data-theme="dark"] .landing-hero {
 .chat-head-input input:focus {
     border-color: var(--accent-main);
 }
+
+.chat-head-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-head-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-head-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.chat-head-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.chat-head-minimize:hover,
+.chat-head-close:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 4px;
+}
