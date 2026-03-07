@@ -514,7 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             : '';
 
                         return `
-                            <li class="online-user-item" onclick="window.location.href='/messages'" style="cursor: pointer;">
+                            <li class="online-user-item" onclick="window.openChatHead(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.profile_pic || ''}', '${user.initials}')" style="cursor: pointer;">
                                 <div class="online-user-avatar">
                                     ${avatarContent}
                                     <div class="online-user-dot"></div>
@@ -535,3 +535,143 @@ document.addEventListener("DOMContentLoaded", () => {
         setInterval(fetchOnlineUsers, 30000);
     }
 });
+
+// --- Floating Chat Heads Logic ---
+window.activeChatIntervals = {};
+
+window.openChatHead = function (userId, userName, profilePic, initials) {
+    const container = document.getElementById("chat-heads-container");
+    if (!container) return;
+
+    // Check if already open
+    const existingChat = document.getElementById(`chat-head-${userId}`);
+    if (existingChat) return;
+
+    const avatarHtml = profilePic
+        ? `<img src="/static/img/uploads/profiles/${profilePic}?v=1" alt="${userName}">`
+        : initials;
+
+    // Create the DOM element
+    const chatBox = document.createElement("div");
+    chatBox.className = "chat-head-box";
+    chatBox.id = `chat-head-${userId}`;
+    chatBox.innerHTML = `
+        <div class="chat-head-header">
+            <div class="chat-head-user">
+                <div class="chat-head-avatar">${avatarHtml}</div>
+                <span>${userName}</span>
+            </div>
+            <button class="chat-head-close" aria-label="Close chat" title="Close">&times;</button>
+        </div>
+        <div class="chat-head-messages" id="chat-messages-${userId}">
+            <!-- Messages go here -->
+            <div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
+        </div>
+        <div class="chat-head-input">
+            <input type="text" id="chat-input-${userId}" placeholder="Type a message..." aria-label="Type a message">
+        </div>
+    `;
+
+    container.appendChild(chatBox);
+
+    const messagesContainer = chatBox.querySelector(`#chat-messages-${userId}`);
+    const closeBtn = chatBox.querySelector(".chat-head-close");
+    const inputField = chatBox.querySelector(`#chat-input-${userId}`);
+
+    // Helper to format timestamps
+    const formatTime = (isoString) => {
+        const d = new Date(isoString);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    // Load conversation history
+    const loadMessages = () => {
+        fetch(`/api/messages/conversation/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+
+                let isScrolledToBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight <= messagesContainer.scrollTop + 20;
+
+                if (!data.messages || data.messages.length === 0) {
+                    messagesContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Start of conversation</div>';
+                    return;
+                }
+
+                messagesContainer.innerHTML = data.messages.map(msg => {
+                    const isSent = msg.sender_id !== userId;
+                    const bubbleClass = isSent ? 'sent' : 'received';
+                    return `
+                        <div class="chat-bubble ${bubbleClass}">${msg.content}</div>
+                        <div class="chat-timestamp">${formatTime(msg.timestamp)}</div>
+                    `;
+                }).join('');
+
+                if (isScrolledToBottom || !window.activeChatIntervals[userId]) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            })
+            .catch(err => {
+                console.error("Error loading chat messages:", err);
+            });
+    };
+
+    // Initial load and polling
+    loadMessages();
+    window.activeChatIntervals[userId] = setInterval(loadMessages, 5000);
+
+    // Close Handler
+    closeBtn.addEventListener("click", () => {
+        clearInterval(window.activeChatIntervals[userId]);
+        delete window.activeChatIntervals[userId];
+        chatBox.remove();
+    });
+
+    // Send Message Handler
+    inputField.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && inputField.value.trim() !== "") {
+            const tempVal = inputField.value.trim();
+            inputField.value = "";
+
+            // Optimistic UI update
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble sent";
+            bubble.textContent = tempVal;
+
+            const time = document.createElement("div");
+            time.className = "chat-timestamp";
+            time.textContent = "Sending...";
+
+            if (messagesContainer.innerHTML.includes("Start of conversation")) {
+                messagesContainer.innerHTML = '';
+            }
+            messagesContainer.appendChild(bubble);
+            messagesContainer.appendChild(time);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Transmit API call
+            fetch("/api/messages/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ receiver_id: userId, content: tempVal })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        time.textContent = "Failed to send";
+                        time.style.color = "red";
+                    } else {
+                        loadMessages(); // reload ground truth
+                    }
+                })
+                .catch(err => {
+                    console.error("Error sending message:", err);
+                    time.textContent = "Failed to send";
+                    time.style.color = "red";
+                });
+        }
+    });
+
+    // Focus input automatically
+    setTimeout(() => inputField.focus(), 100);
+};

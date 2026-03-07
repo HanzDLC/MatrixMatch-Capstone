@@ -246,6 +246,12 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Floating Chat Heads Container -->
+    <div id="chat-heads-container"
+        style="position: fixed; bottom: 0; right: 20px; display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 10px; z-index: 9999; pointer-events: none;">
+    </div>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <script>
