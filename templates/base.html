@@ -45,10 +45,24 @@
             </div>
             <div class="topbar__right">
                 {% if is_authenticated %}
-                <button type="button" class="icon-button notif-btn" aria-label="Notifications">
-                    Alerts
-                    <span class="notif-btn__dot"></span>
-                </button>
+                <div style="position: relative;">
+                    <button type="button" class="icon-button notif-btn" aria-label="Notifications"
+                        id="notif-btn-toggle">
+                        Alerts
+                        <span class="notif-btn__dot"></span>
+                    </button>
+                    <!-- Facebook style dropdown -->
+                    <div class="notifications-dropdown" id="notificationsDropdown" aria-hidden="true">
+                        <div class="notifications-dropdown__header">
+                            <h3 class="notifications-dropdown__title">Notifications</h3>
+                            <button class="notifications-dropdown__mark-read" id="markAllReadBtn">Mark all as
+                                read</button>
+                        </div>
+                        <div class="notifications-dropdown__body" id="notificationsList">
+                            <div class="notifications-empty">Looking for new documents...</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
                 <button type="button" id="themeToggle" class="icon-button theme-toggle"
                     aria-label="Toggle dark or light mode">

@@ -192,10 +192,35 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Document Alerts Logic ---
     const notifBtn = document.querySelector(".notif-btn");
     const notifDot = document.querySelector(".notif-btn__dot");
+    const notifDropdown = document.getElementById("notificationsDropdown");
+    const markAllReadBtn = document.getElementById("markAllReadBtn");
+    const notificationsList = document.getElementById("notificationsList");
 
-    if (notifBtn && notifDot) {
-        // Initially hide dot to prevent false positives
-        notifDot.style.display = "none";
+    if (notifBtn && notifDropdown) {
+        // Hide dot initially
+        if (notifDot) notifDot.style.display = "none";
+
+        let latestAlertId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
+        let hasNewAlerts = false;
+
+        const renderNotifications = (docs) => {
+            if (!docs || docs.length === 0) {
+                notificationsList.innerHTML = '<div class="notifications-empty">You\'re all caught up!</div>';
+                return;
+            }
+
+            notificationsList.innerHTML = docs.map(doc => `
+                <div class="notifications-item">
+                    <div style="display: flex; align-items: start;">
+                        <span class="notifications-item__icon">📄</span>
+                        <div>
+                            <div class="notifications-item__title">New Document Added</div>
+                            <div class="notifications-item__title" style="font-weight: 400; color: var(--text-soft);">"${doc}"</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        };
 
         fetch("/api/alerts")
             .then(res => {
@@ -203,49 +228,60 @@ document.addEventListener("DOMContentLoaded", () => {
                 return res.json();
             })
             .then(data => {
-                const storedId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
-                if (data.latest_log_id > storedId && data.recent_documents.length > 0) {
+                hasNewAlerts = data.latest_log_id > latestAlertId;
+
+                if (hasNewAlerts && data.recent_documents.length > 0 && notifDot) {
                     notifDot.style.display = "block";
                 }
 
-                notifBtn.addEventListener("click", () => {
-                    notifDot.style.display = "none";
-                    if (data.latest_log_id > storedId) {
-                        localStorage.setItem("matrixmatch_last_alert_id", data.latest_log_id.toString());
-                    }
+                renderNotifications(data.recent_documents || []);
 
-                    if (data.recent_documents && data.recent_documents.length > 0) {
-                        const docList = data.recent_documents.map(d => `<li><strong>${d}</strong></li>`).join("");
-                        Swal.fire({
-                            title: "New Documents Added",
-                            html: `Since you last checked, the following documents were added to our database:<br><br><ul style="text-align: left; font-size: 0.92rem; margin: 0; padding-left: 20px;">${docList}</ul>`,
-                            icon: "info",
-                            confirmButtonText: "Awesome",
-                            confirmButtonColor: "#1ea6f6"
-                        });
+                // Toggle dropdown manually
+                notifBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const isOpen = notifDropdown.classList.contains("is-open");
+
+                    if (!isOpen) {
+                        notifDropdown.classList.add("is-open");
+                        notifDropdown.setAttribute("aria-hidden", "false");
+
+                        // Clear the dot when they open it
+                        if (notifDot) notifDot.style.display = "none";
+                        if (hasNewAlerts) {
+                            localStorage.setItem("matrixmatch_last_alert_id", data.latest_log_id.toString());
+                            hasNewAlerts = false;
+                        }
                     } else {
-                        Swal.fire({
-                            title: "You're all caught up!",
-                            text: "No new documents have been added since your last visit.",
-                            icon: "success",
-                            confirmButtonText: "Close",
-                            confirmButtonColor: "#12b76a"
-                        });
+                        notifDropdown.classList.remove("is-open");
+                        notifDropdown.setAttribute("aria-hidden", "true");
                     }
                 });
             })
             .catch(err => {
                 console.error("Failed to fetch alerts", err);
-                notifBtn.addEventListener("click", () => {
-                    Swal.fire({
-                        title: "No New Documents",
-                        text: "You're all caught up!",
-                        icon: "success",
-                        confirmButtonText: "Close",
-                        confirmButtonColor: "#1ea6f6"
-                    });
+                renderNotifications([]);
+                notifBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    notifDropdown.classList.toggle("is-open");
                 });
             });
+
+        // Mark as read button simply closes it for now
+        if (markAllReadBtn) {
+            markAllReadBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (notifDot) notifDot.style.display = "none";
+                notifDropdown.classList.remove("is-open");
+            });
+        }
+
+        // Close when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!notifBtn.contains(e.target) && !notifDropdown.contains(e.target)) {
+                notifDropdown.classList.remove("is-open");
+                notifDropdown.setAttribute("aria-hidden", "true");
+            }
+        });
     }
 
     // --- Custom Confirmation Modal Logic ---

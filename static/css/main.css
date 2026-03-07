@@ -2909,3 +2909,99 @@ body[data-theme="dark"] .landing-hero {
 .sidebar__footer-link:hover {
     background-color: var(--bg-muted);
 }
+/* Notifications Dropdown */
+.notifications-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -10px;
+    width: 320px;
+    max-height: 400px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-strong);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    transform-origin: top right;
+    animation: dropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.notifications-dropdown.is-open {
+    display: flex;
+}
+@keyframes dropdownPop {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.notifications-dropdown__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-main);
+    background: var(--bg-card-strong);
+}
+.notifications-dropdown__title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.notifications-dropdown__mark-read {
+    background: none;
+    border: none;
+    color: var(--accent-main);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+.notifications-dropdown__mark-read:hover {
+    text-decoration: underline;
+}
+.notifications-dropdown__body {
+    overflow-y: auto;
+    max-height: 340px;
+}
+.notifications-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-main);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease;
+}
+.notifications-item:hover {
+    background: var(--bg-card-strong);
+}
+.notifications-item:last-child {
+    border-bottom: none;
+}
+.notifications-item--unread {
+    background: rgba(30, 166, 246, 0.05);
+}
+.notifications-item__icon {
+    color: var(--accent-main);
+    font-size: 1.1rem;
+    margin-right: 8px;
+}
+.notifications-item__title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+.notifications-item__time {
+    font-size: 0.75rem;
+    color: var(--text-soft);
+}
+.notifications-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 0.85rem;
+}
