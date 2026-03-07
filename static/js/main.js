@@ -513,6 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             : '';
 
                         return `
+                        <a href="/messages" style="text-decoration:none; color:inherit; display:block;">
                             <li class="online-user-item">
                                 <div class="online-user-avatar">
                                     ${avatarContent}
@@ -523,6 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     ${badge}
                                 </div>
                             </li>
+                        </a>
                         `;
                     }).join('');
                 })
