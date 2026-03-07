@@ -1,3 +1,67 @@
+const escapeHtml = (value = "") => String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const createListSignature = (items = [], projector) => items.map(projector).join("||");
+
+const createMessageSignature = (messages = []) => createListSignature(
+    messages,
+    (message) => `${message.id}:${message.sender_id}:${message.timestamp || ""}:${message.content || ""}`
+);
+
+const createSerialPoller = (task, intervalMs) => {
+    let timerId = null;
+    let inFlightPromise = null;
+    let shouldRerun = false;
+
+    const run = () => {
+        if (inFlightPromise) {
+            shouldRerun = true;
+            return inFlightPromise;
+        }
+
+        inFlightPromise = Promise.resolve()
+            .then(task)
+            .finally(() => {
+                const rerunAfterCompletion = shouldRerun;
+                shouldRerun = false;
+                inFlightPromise = null;
+
+                if (rerunAfterCompletion) {
+                    run();
+                }
+            });
+
+        return inFlightPromise;
+    };
+
+    return {
+        run,
+        start({ immediate = true } = {}) {
+            if (timerId) {
+                return;
+            }
+
+            if (immediate) {
+                run();
+            }
+
+            timerId = window.setInterval(run, intervalMs);
+        },
+        stop() {
+            if (timerId) {
+                window.clearInterval(timerId);
+                timerId = null;
+            }
+
+            shouldRerun = false;
+        }
+    };
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebarToggle");
@@ -189,18 +253,76 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyResponsiveTableLabels();
 
-    const closeDropdown = (dropdown) => {
+    const setDropdownState = (dropdown, isOpen) => {
         if (!dropdown) return;
-        dropdown.classList.remove("is-open");
-        dropdown.setAttribute("aria-hidden", "true");
+        dropdown.classList.toggle("is-open", isOpen);
+        dropdown.setAttribute("aria-hidden", isOpen ? "false" : "true");
     };
 
-    const openExclusiveDropdown = (dropdownToOpen, dropdownToClose) => {
-        closeDropdown(dropdownToClose);
-        if (!dropdownToOpen) return;
-        dropdownToOpen.classList.add("is-open");
-        dropdownToOpen.setAttribute("aria-hidden", "false");
+    const closeDropdown = (dropdown) => {
+        setDropdownState(dropdown, false);
     };
+
+    const toggleExclusiveDropdown = (dropdownToToggle, ...dropdownsToClose) => {
+        if (!dropdownToToggle) return false;
+
+        const shouldOpen = !dropdownToToggle.classList.contains("is-open");
+        dropdownsToClose.forEach(closeDropdown);
+        setDropdownState(dropdownToToggle, shouldOpen);
+        return shouldOpen;
+    };
+
+    const bindOutsideClickCloser = (button, dropdown) => {
+        if (!button || !dropdown) return;
+
+        document.addEventListener("click", (e) => {
+            if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                closeDropdown(dropdown);
+            }
+        });
+    };
+
+    const openChatHeadFromTrigger = (chatTrigger) => {
+        if (!chatTrigger || typeof window.openChatHead !== "function") return;
+
+        const userId = Number(chatTrigger.dataset.chatUserId);
+        if (Number.isNaN(userId)) return;
+
+        window.openChatHead(
+            userId,
+            chatTrigger.dataset.chatUserName || "",
+            chatTrigger.dataset.chatProfilePic || "",
+            chatTrigger.dataset.chatInitials || ""
+        );
+    };
+
+    const createRecentMessagesSignature = (conversations, unreadCount) => `${unreadCount}::${createListSignature(
+        conversations,
+        (conversation) => [
+            conversation.other_user_id,
+            conversation.timestamp || "",
+            conversation.is_read ? 1 : 0,
+            conversation.was_sent_by_me ? 1 : 0,
+            conversation.latest_message || ""
+        ].join(":")
+    )}`;
+
+    const createUnreadConversationsSignature = (conversations) => createListSignature(
+        conversations.filter((conversation) => !conversation.is_read && !conversation.was_sent_by_me),
+        (conversation) => `${conversation.other_user_id}:${conversation.timestamp || ""}`
+    );
+
+    const createOnlineUsersSignature = (users) => createListSignature(
+        users,
+        (user) => [
+            user.id,
+            user.name || "",
+            user.role || "",
+            user.profile_pic || "",
+            user.initials || "",
+            user.is_online ? 1 : 0
+        ].join(":")
+    );
 
     // --- Document Alerts Logic ---
     const notifBtn = document.getElementById("notif-btn-toggle");
@@ -208,12 +330,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const notifDropdown = document.getElementById("notificationsDropdown");
     const markAllReadBtn = document.getElementById("markAllReadBtn");
     const notificationsList = document.getElementById("notificationsList");
+    const msgBtn = document.getElementById("msg-btn-toggle");
+    const msgDot = document.getElementById("msgDot");
+    const msgDropdown = document.getElementById("messagesDropdown");
+    const recentMessagesList = document.getElementById("recentMessagesList");
 
     if (notifBtn && notifDropdown) {
         // Hide dot initially
         if (notifDot) notifDot.style.display = "none";
 
-        let latestAlertId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
+        let lastSeenAlertId = parseInt(localStorage.getItem("matrixmatch_last_alert_id") || "0", 10);
+        let latestAlertId = lastSeenAlertId;
         let hasNewAlerts = false;
 
         const getRelativeTime = (isoString) => {
@@ -251,79 +378,65 @@ document.addEventListener("DOMContentLoaded", () => {
             `).join('');
         };
 
+        const markAlertsSeen = () => {
+            if (notifDot) notifDot.style.display = "none";
+            if (latestAlertId > lastSeenAlertId) {
+                localStorage.setItem("matrixmatch_last_alert_id", latestAlertId.toString());
+                lastSeenAlertId = latestAlertId;
+            }
+            hasNewAlerts = false;
+        };
+
+        notifBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (toggleExclusiveDropdown(notifDropdown, msgDropdown)) {
+                markAlertsSeen();
+            }
+        });
+
         fetch("/api/alerts")
             .then(res => {
                 if (!res.ok) throw new Error("API not okay");
                 return res.json();
             })
             .then(data => {
-                hasNewAlerts = data.latest_log_id > latestAlertId;
+                const recentDocuments = data.recent_documents || [];
 
-                if (hasNewAlerts && data.recent_documents.length > 0 && notifDot) {
-                    notifDot.style.display = "block";
+                latestAlertId = Number(data.latest_log_id || lastSeenAlertId);
+                hasNewAlerts = latestAlertId > lastSeenAlertId;
+
+                if (hasNewAlerts) {
+                    if (notifDropdown.classList.contains("is-open")) {
+                        markAlertsSeen();
+                    } else if (recentDocuments.length > 0 && notifDot) {
+                        notifDot.style.display = "block";
+                    }
                 }
 
-                renderNotifications(data.recent_documents || []);
-
-                // Toggle dropdown manually
-                notifBtn.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const isOpen = notifDropdown.classList.contains("is-open");
-
-                    if (!isOpen) {
-                        openExclusiveDropdown(notifDropdown, document.getElementById("messagesDropdown"));
-
-                        // Clear the dot when they open it
-                        if (notifDot) notifDot.style.display = "none";
-                        if (hasNewAlerts) {
-                            localStorage.setItem("matrixmatch_last_alert_id", data.latest_log_id.toString());
-                            hasNewAlerts = false;
-                        }
-                    } else {
-                        notifDropdown.classList.remove("is-open");
-                        notifDropdown.setAttribute("aria-hidden", "true");
-                    }
-                });
+                renderNotifications(recentDocuments);
             })
             .catch(err => {
                 console.error("Failed to fetch alerts", err);
                 renderNotifications([]);
-                notifBtn.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const isOpen = notifDropdown.classList.contains("is-open");
-                    if (!isOpen) {
-                        openExclusiveDropdown(notifDropdown, document.getElementById("messagesDropdown"));
-                    } else {
-                        closeDropdown(notifDropdown);
-                    }
-                });
             });
 
         // Mark as read button simply closes it for now
         if (markAllReadBtn) {
             markAllReadBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
-                if (notifDot) notifDot.style.display = "none";
-                notifDropdown.classList.remove("is-open");
+                markAlertsSeen();
+                closeDropdown(notifDropdown);
             });
         }
 
-        // Close when clicking outside
-        document.addEventListener("click", (e) => {
-            if (!notifBtn.contains(e.target) && !notifDropdown.contains(e.target)) {
-                notifDropdown.classList.remove("is-open");
-                notifDropdown.setAttribute("aria-hidden", "true");
-            }
-        });
+        bindOutsideClickCloser(notifBtn, notifDropdown);
     }
 
     // --- Messages Dropdown Logic ---
-    const msgBtn = document.getElementById("msg-btn-toggle");
-    const msgDot = document.getElementById("msgDot");
-    const msgDropdown = document.getElementById("messagesDropdown");
-    const recentMessagesList = document.getElementById("recentMessagesList");
+    if (msgBtn && msgDropdown && recentMessagesList) {
+        let lastRecentMessagesSignature = null;
+        let lastUnreadConversationsSignature = null;
 
-    if (msgBtn && msgDropdown) {
         const renderMessages = (conversations) => {
             if (!conversations || conversations.length === 0) {
                 recentMessagesList.innerHTML = '<div class="notifications-empty">No conversations yet</div>';
@@ -331,26 +444,34 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             recentMessagesList.innerHTML = conversations.map(conv => {
+                const fullName = `${conv.first_name} ${conv.last_name}`;
+                const safeName = escapeHtml(fullName);
+                const safeInitials = escapeHtml(conv.initials || "");
+                const safeProfilePic = escapeHtml(conv.profile_pic || "");
+                const previewText = escapeHtml(`${conv.was_sent_by_me ? 'You: ' : ''}${conv.latest_message || ''}`);
                 const avatar = conv.profile_pic
-                    ? `<img src="/static/img/uploads/profiles/${conv.profile_pic}?v=1" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
-                    : `${conv.initials}`;
+                    ? `<img src="/static/img/uploads/profiles/${safeProfilePic}?v=1" alt="${safeName}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+                    : safeInitials;
 
                 const isUnread = !conv.is_read && !conv.was_sent_by_me;
                 const fontWeight = isUnread ? '700' : '400';
                 const color = isUnread ? 'var(--text-main)' : 'var(--text-soft)';
 
-                const safeName = `${conv.first_name} ${conv.last_name}`.replace(/'/g, "\\'");
-
                 return `
-                        <div class="notifications-item" onclick="window.openChatHead(${conv.other_user_id}, '${safeName}', '${conv.profile_pic || ''}', '${conv.initials}')" style="cursor: pointer;">
+                        <div class="notifications-item"
+                            data-chat-user-id="${conv.other_user_id}"
+                            data-chat-user-name="${safeName}"
+                            data-chat-profile-pic="${safeProfilePic}"
+                            data-chat-initials="${safeInitials}"
+                            style="cursor: pointer;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width:36px; height:36px; border-radius:50%; background:var(--accent-main); color:white; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700;">
                                     ${avatar}
                                 </div>
                                 <div style="flex: 1; overflow:hidden;">
-                                    <div class="notifications-item__title" style="font-weight:600;">${conv.first_name} ${conv.last_name}</div>
+                                    <div class="notifications-item__title" style="font-weight:600;">${safeName}</div>
                                     <div class="notifications-item__title" style="font-weight: ${fontWeight}; color: ${color}; font-size: 0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                        ${conv.was_sent_by_me ? 'You: ' : ''}${conv.latest_message}
+                                        ${previewText}
                                     </div>
                                 </div>
                                 ${isUnread ? '<div style="width:8px; height:8px; border-radius:50%; background:var(--error-main);"></div>' : ''}
@@ -360,55 +481,62 @@ document.addEventListener("DOMContentLoaded", () => {
             }).join('');
         };
 
+        const autoOpenUnreadChatHeads = (conversations) => {
+            conversations.forEach(conv => {
+                const isUnread = !conv.is_read && !conv.was_sent_by_me;
+                if (isUnread && !document.getElementById(`chat-head-${conv.other_user_id}`) && typeof window.openChatHead === 'function') {
+                    window.openChatHead(conv.other_user_id, `${conv.first_name} ${conv.last_name}`, conv.profile_pic, conv.initials);
+                }
+            });
+        };
+
         const fetchRecentMessages = () => {
-            fetch("/api/messages/recent")
+            return fetch("/api/messages/recent")
                 .then(res => res.json())
                 .then(data => {
+                    const conversations = data.conversations || [];
+                    const recentMessagesSignature = createRecentMessagesSignature(conversations, data.unread_count || 0);
+                    const unreadConversationsSignature = createUnreadConversationsSignature(conversations);
+
                     if (msgDot) {
                         msgDot.style.display = data.unread_count > 0 ? "flex" : "none";
                         msgDot.textContent = data.unread_count > 0 ? data.unread_count : "";
                     }
-                    renderMessages(data.conversations || []);
 
-                    // Auto-popup chat heads for new incoming unread messages
-                    if (data.conversations) {
-                        data.conversations.forEach(conv => {
-                            const isUnread = !conv.is_read && !conv.was_sent_by_me;
-                            if (isUnread) {
-                                const existingChat = document.getElementById(`chat-head-${conv.other_user_id}`);
-                                if (!existingChat && typeof window.openChatHead === 'function') {
-                                    window.openChatHead(conv.other_user_id, `${conv.first_name} ${conv.last_name}`, conv.profile_pic, conv.initials);
-                                }
-                            }
-                        });
+                    if (recentMessagesSignature !== lastRecentMessagesSignature) {
+                        renderMessages(conversations);
+                        lastRecentMessagesSignature = recentMessagesSignature;
+                    }
+
+                    if (unreadConversationsSignature !== lastUnreadConversationsSignature) {
+                        autoOpenUnreadChatHeads(conversations);
+                        lastUnreadConversationsSignature = unreadConversationsSignature;
                     }
                 })
                 .catch(err => console.error("Failed to fetch recent messages", err));
         };
 
+        const recentMessagesPoller = createSerialPoller(fetchRecentMessages, 15000);
+
         // Fetch immediately and poll every 15s
-        fetchRecentMessages();
-        setInterval(fetchRecentMessages, 15000);
+        recentMessagesPoller.start();
 
         // Toggle dropdown
         msgBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            const isOpen = msgDropdown.classList.contains("is-open");
-            if (!isOpen) {
-                openExclusiveDropdown(msgDropdown, notifDropdown);
-                fetchRecentMessages(); // Refresh on open
-            } else {
-                closeDropdown(msgDropdown);
+            if (toggleExclusiveDropdown(msgDropdown, notifDropdown)) {
+                recentMessagesPoller.run(); // Refresh on open
             }
         });
 
-        // Close when clicking outside
-        document.addEventListener("click", (e) => {
-            if (!msgBtn.contains(e.target) && !msgDropdown.contains(e.target)) {
-                msgDropdown.classList.remove("is-open");
-                msgDropdown.setAttribute("aria-hidden", "true");
+        recentMessagesList.addEventListener("click", (e) => {
+            const chatTrigger = e.target.closest(".notifications-item[data-chat-user-id]");
+            if (chatTrigger && recentMessagesList.contains(chatTrigger)) {
+                openChatHeadFromTrigger(chatTrigger);
             }
         });
+
+        bindOutsideClickCloser(msgBtn, msgDropdown);
     }
 
     // --- Custom Confirmation Modal Logic ---
@@ -519,6 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (onlineUsersList) {
         let allSidebarUsers = []; // Store fetched users for local filtering
+        let lastOnlineUsersSignature = null;
 
         const renderSidebarUsers = (filterText = "") => {
             if (allSidebarUsers.length === 0) {
@@ -535,9 +664,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             onlineUsersList.innerHTML = filteredUsers.map(user => {
+                const safeName = escapeHtml(user.name);
+                const safeProfilePic = escapeHtml(user.profile_pic || "");
+                const safeInitials = escapeHtml(user.initials || "");
                 const avatarContent = user.profile_pic
-                    ? `<img src="/static/img/uploads/profiles/${user.profile_pic}?v=1" alt="${user.name}">`
-                    : user.initials;
+                    ? `<img src="/static/img/uploads/profiles/${safeProfilePic}?v=1" alt="${safeName}">`
+                    : safeInitials;
 
                 const badge = user.role === 'Admin'
                     ? `<span class="online-user-role-badge">Admin</span>`
@@ -548,13 +680,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 const dotShadow = user.is_online ? "0 0 3px rgba(18,183,106,0.5)" : "none";
 
                 return `
-                    <li class="online-user-item" onclick="window.openChatHead(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.profile_pic || ''}', '${user.initials}')" style="cursor: pointer; opacity: ${user.is_online ? '1' : '0.65'};">
+                    <li class="online-user-item"
+                        data-chat-user-id="${user.id}"
+                        data-chat-user-name="${safeName}"
+                        data-chat-profile-pic="${safeProfilePic}"
+                        data-chat-initials="${safeInitials}"
+                        style="cursor: pointer; opacity: ${user.is_online ? '1' : '0.65'};">
                         <div class="online-user-avatar" style="${!user.is_online ? 'filter: grayscale(1);' : ''}">
                             ${avatarContent}
                             <div class="online-user-dot" style="background: ${dotColor}; box-shadow: ${dotShadow}; border-color: ${user.is_online ? 'var(--bg-card)' : 'var(--bg-main)'};"></div>
                         </div>
                         <div class="online-user-name">
-                            ${user.name}
+                            ${safeName}
                             ${badge}
                         </div>
                     </li>
@@ -563,10 +700,18 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         const fetchOnlineUsers = () => {
-            fetch("/api/online_users")
+            return fetch("/api/online_users")
                 .then(res => res.json())
                 .then(data => {
-                    allSidebarUsers = data.online_users || [];
+                    const users = data.online_users || [];
+                    const usersSignature = createOnlineUsersSignature(users);
+
+                    if (usersSignature === lastOnlineUsersSignature) {
+                        return;
+                    }
+
+                    lastOnlineUsersSignature = usersSignature;
+                    allSidebarUsers = users;
                     // Render using the current search filter
                     const currentFilter = sidebarUserSearch ? sidebarUserSearch.value : "";
                     renderSidebarUsers(currentFilter);
@@ -574,39 +719,85 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(err => console.error("Could not fetch sidebar users:", err));
         };
 
+        const onlineUsersPoller = createSerialPoller(fetchOnlineUsers, 60000);
+
         if (sidebarUserSearch) {
             sidebarUserSearch.addEventListener('input', (e) => {
                 renderSidebarUsers(e.target.value);
             });
         }
 
+        onlineUsersList.addEventListener("click", (e) => {
+            const chatTrigger = e.target.closest(".online-user-item[data-chat-user-id]");
+            if (chatTrigger && onlineUsersList.contains(chatTrigger)) {
+                openChatHeadFromTrigger(chatTrigger);
+            }
+        });
+
         // Fetch immediately, then poll every 60 seconds (slower polling for full list)
-        fetchOnlineUsers();
-        setInterval(fetchOnlineUsers, 60000);
+        onlineUsersPoller.start();
     }
 });
 
 // --- Floating Chat Heads Logic ---
-window.activeChatIntervals = {};
+window.activeChatIntervals = window.activeChatIntervals || {};
+window.chatHeadUsageOrder = window.chatHeadUsageOrder || [];
 const MAX_OPEN_CHAT_HEADS = 3;
 
+const getChatHeadUserId = (chatBox) => {
+    if (!chatBox) return null;
+
+    const rawUserId = chatBox.dataset.userId || chatBox.id.replace("chat-head-", "");
+    const parsedUserId = Number(rawUserId);
+    return Number.isNaN(parsedUserId) ? null : parsedUserId;
+};
+
+const removeChatHeadFromUsage = (userId) => {
+    const usageIndex = window.chatHeadUsageOrder.indexOf(userId);
+    if (usageIndex !== -1) {
+        window.chatHeadUsageOrder.splice(usageIndex, 1);
+    }
+};
+
 const touchChatHead = (userId) => {
-    window.chatHeadUsageOrder = (window.chatHeadUsageOrder || []).filter(id => id !== userId);
+    removeChatHeadFromUsage(userId);
     window.chatHeadUsageOrder.push(userId);
+};
+
+const stopChatHeadPolling = (userId) => {
+    const activePoller = window.activeChatIntervals[userId];
+    if (!activePoller) {
+        return;
+    }
+
+    if (typeof activePoller.stop === "function") {
+        activePoller.stop();
+    } else {
+        clearInterval(activePoller);
+    }
+
+    delete window.activeChatIntervals[userId];
 };
 
 const closeChatHead = (userId) => {
     const chatBox = document.getElementById(`chat-head-${userId}`);
 
-    if (window.activeChatIntervals[userId]) {
-        clearInterval(window.activeChatIntervals[userId]);
-        delete window.activeChatIntervals[userId];
-    }
+    stopChatHeadPolling(userId);
 
-    window.chatHeadUsageOrder = (window.chatHeadUsageOrder || []).filter(id => id !== userId);
+    removeChatHeadFromUsage(userId);
 
     if (chatBox) {
         chatBox.remove();
+    }
+};
+
+const enforceChatHeadLimit = (container) => {
+    while (container.children.length >= MAX_OPEN_CHAT_HEADS) {
+        const oldestChatUserId = window.chatHeadUsageOrder[0] ?? getChatHeadUserId(container.querySelector(".chat-head-box"));
+        if (oldestChatUserId === null) {
+            break;
+        }
+        closeChatHead(oldestChatUserId);
     }
 };
 
@@ -631,19 +822,14 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
         return;
     }
 
-    const openChats = container.querySelectorAll(".chat-head-box");
-    if (openChats.length >= MAX_OPEN_CHAT_HEADS) {
-        const oldestChatUserId = window.chatHeadUsageOrder?.[0]
-            ?? Number(openChats[0]?.id.replace("chat-head-", ""));
+    enforceChatHeadLimit(container);
 
-        if (!Number.isNaN(oldestChatUserId)) {
-            closeChatHead(oldestChatUserId);
-        }
-    }
-
+    const safeUserName = escapeHtml(userName || "");
+    const safeProfilePic = escapeHtml(profilePic || "");
+    const safeInitials = escapeHtml(initials || "");
     const avatarHtml = profilePic
-        ? `<img src="/static/img/uploads/profiles/${profilePic}?v=1" alt="${userName}">`
-        : initials;
+        ? `<img src="/static/img/uploads/profiles/${safeProfilePic}?v=1" alt="${safeUserName}">`
+        : safeInitials;
 
     // Create the DOM element
     const chatBox = document.createElement("div");
@@ -654,7 +840,7 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
         <div class="chat-head-header">
             <div class="chat-head-user">
                 <div class="chat-head-avatar">${avatarHtml}</div>
-                <span>${userName}</span>
+                <span>${safeUserName}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button class="chat-head-minimize" aria-label="Minimize chat" title="Minimize" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.2rem; line-height: 1; opacity: 0.8; padding: 0;">-</button>
@@ -663,8 +849,7 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
         </div>
         <div class="chat-head-content" id="chat-content-${chatUserId}" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
             <div class="chat-head-messages" id="chat-messages-${chatUserId}">
-                <!-- Messages go here -->
-                <div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
+                <div class="chat-head-placeholder" style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
             </div>
             <div class="chat-head-input" style="padding: 8px 10px; display: flex; align-items: center; gap: 6px;">
                 <input type="text" id="chat-input-${chatUserId}" placeholder="Type..." aria-label="Type a message" style="flex: 1; min-width: 0;">
@@ -683,6 +868,38 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
     const sendBtn = chatBox.querySelector(".chat-head-send-btn");
     const inputField = chatBox.querySelector(`#chat-input-${chatUserId}`);
     const header = chatBox.querySelector(".chat-head-header");
+    let lastRenderedMessageSignature = "";
+    let hasPendingOptimisticMessage = false;
+    let failedMessageResetTimeoutId = null;
+    const clearFailedMessageReset = () => {
+        if (failedMessageResetTimeoutId) {
+            window.clearTimeout(failedMessageResetTimeoutId);
+            failedMessageResetTimeoutId = null;
+        }
+    };
+    const scheduleFailedMessageReset = () => {
+        clearFailedMessageReset();
+        failedMessageResetTimeoutId = window.setTimeout(() => {
+            failedMessageResetTimeoutId = null;
+            if (chatBox.isConnected) {
+                lastRenderedMessageSignature = "";
+                chatMessagesPoller.run();
+            }
+        }, 2000);
+    };
+    const renderChatPlaceholder = (message) => {
+        messagesContainer.innerHTML = `<div class="chat-head-placeholder" style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">${escapeHtml(message)}</div>`;
+    };
+    const renderChatMessages = (messages) => {
+        messagesContainer.innerHTML = messages.map(msg => {
+            const isSent = msg.sender_id !== chatUserId;
+            const bubbleClass = isSent ? 'sent' : 'received';
+            return `
+                <div class="chat-bubble ${bubbleClass}">${escapeHtml(msg.content || "")}</div>
+                <div class="chat-timestamp">${formatTime(msg.timestamp)}</div>
+            `;
+        }).join('');
+    };
 
     // Toggle Minimize
     const toggleMinimize = () => {
@@ -716,28 +933,34 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
 
     // Load conversation history
     const loadMessages = () => {
-        fetch(`/api/messages/conversation/${chatUserId}`)
+        return fetch(`/api/messages/conversation/${chatUserId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.error) throw new Error(data.error);
 
-                let isScrolledToBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight <= messagesContainer.scrollTop + 20;
+                const messages = data.messages || [];
+                const messageSignature = createMessageSignature(messages);
+                const shouldStickToBottom = !lastRenderedMessageSignature
+                    || messagesContainer.scrollHeight - messagesContainer.clientHeight <= messagesContainer.scrollTop + 20;
 
-                if (!data.messages || data.messages.length === 0) {
-                    messagesContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Start of conversation</div>';
+                if (hasPendingOptimisticMessage && messageSignature === lastRenderedMessageSignature) {
                     return;
                 }
 
-                messagesContainer.innerHTML = data.messages.map(msg => {
-                    const isSent = msg.sender_id !== chatUserId;
-                    const bubbleClass = isSent ? 'sent' : 'received';
-                    return `
-                        <div class="chat-bubble ${bubbleClass}">${msg.content}</div>
-                        <div class="chat-timestamp">${formatTime(msg.timestamp)}</div>
-                    `;
-                }).join('');
+                if (messageSignature === lastRenderedMessageSignature) {
+                    return;
+                }
 
-                if (isScrolledToBottom || !window.activeChatIntervals[chatUserId]) {
+                if (messages.length === 0) {
+                    renderChatPlaceholder("Start of conversation");
+                } else {
+                    renderChatMessages(messages);
+                }
+
+                lastRenderedMessageSignature = messageSignature;
+                hasPendingOptimisticMessage = false;
+
+                if (shouldStickToBottom) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             })
@@ -746,12 +969,13 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
             });
     };
 
-    // Initial load and polling
-    loadMessages();
-    window.activeChatIntervals[chatUserId] = setInterval(loadMessages, 5000);
+    const chatMessagesPoller = createSerialPoller(loadMessages, 5000);
+    window.activeChatIntervals[chatUserId] = chatMessagesPoller;
+    chatMessagesPoller.start();
 
     // Close Handler
     closeBtn.addEventListener("click", () => {
+        clearFailedMessageReset();
         closeChatHead(chatUserId);
     });
 
@@ -771,13 +995,15 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
         time.className = "chat-timestamp";
         time.textContent = "Sending...";
 
-        if (messagesContainer.innerHTML.includes("Start of conversation")) {
+        if (messagesContainer.querySelector(".chat-head-placeholder")) {
             messagesContainer.innerHTML = '';
         }
         messagesContainer.appendChild(bubble);
         messagesContainer.appendChild(time);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         touchChatHead(chatUserId);
+        hasPendingOptimisticMessage = true;
+        clearFailedMessageReset();
 
         // Transmit API call
         fetch("/api/messages/send", {
@@ -788,16 +1014,20 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
+                    hasPendingOptimisticMessage = false;
                     time.textContent = "Failed to send";
                     time.style.color = "red";
+                    scheduleFailedMessageReset();
                 } else {
-                    loadMessages(); // reload ground truth
+                    chatMessagesPoller.run(); // reload ground truth
                 }
             })
             .catch(err => {
                 console.error("Error sending message:", err);
+                hasPendingOptimisticMessage = false;
                 time.textContent = "Failed to send";
                 time.style.color = "red";
+                scheduleFailedMessageReset();
             });
     };
 
