@@ -189,6 +189,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyResponsiveTableLabels();
 
+    const closeDropdown = (dropdown) => {
+        if (!dropdown) return;
+        dropdown.classList.remove("is-open");
+        dropdown.setAttribute("aria-hidden", "true");
+    };
+
+    const openExclusiveDropdown = (dropdownToOpen, dropdownToClose) => {
+        closeDropdown(dropdownToClose);
+        if (!dropdownToOpen) return;
+        dropdownToOpen.classList.add("is-open");
+        dropdownToOpen.setAttribute("aria-hidden", "false");
+    };
+
     // --- Document Alerts Logic ---
     const notifBtn = document.getElementById("notif-btn-toggle");
     const notifDot = notifBtn ? notifBtn.querySelector(".notif-btn__dot") : null;
@@ -258,8 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const isOpen = notifDropdown.classList.contains("is-open");
 
                     if (!isOpen) {
-                        notifDropdown.classList.add("is-open");
-                        notifDropdown.setAttribute("aria-hidden", "false");
+                        openExclusiveDropdown(notifDropdown, document.getElementById("messagesDropdown"));
 
                         // Clear the dot when they open it
                         if (notifDot) notifDot.style.display = "none";
@@ -278,7 +290,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderNotifications([]);
                 notifBtn.addEventListener("click", (e) => {
                     e.stopPropagation();
-                    notifDropdown.classList.toggle("is-open");
+                    const isOpen = notifDropdown.classList.contains("is-open");
+                    if (!isOpen) {
+                        openExclusiveDropdown(notifDropdown, document.getElementById("messagesDropdown"));
+                    } else {
+                        closeDropdown(notifDropdown);
+                    }
                 });
             });
 
@@ -378,19 +395,10 @@ document.addEventListener("DOMContentLoaded", () => {
             e.stopPropagation();
             const isOpen = msgDropdown.classList.contains("is-open");
             if (!isOpen) {
-                msgDropdown.classList.add("is-open");
-                msgDropdown.setAttribute("aria-hidden", "false");
+                openExclusiveDropdown(msgDropdown, notifDropdown);
                 fetchRecentMessages(); // Refresh on open
-
-                // Close the Alerts list to prevent overlapping UI
-                const notifDropdown = document.getElementById("notificationsDropdown");
-                if (notifDropdown) {
-                    notifDropdown.classList.remove("is-open");
-                    notifDropdown.setAttribute("aria-hidden", "true");
-                }
             } else {
-                msgDropdown.classList.remove("is-open");
-                msgDropdown.setAttribute("aria-hidden", "true");
+                closeDropdown(msgDropdown);
             }
         });
 
