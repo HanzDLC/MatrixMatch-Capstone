@@ -155,3 +155,27 @@ def update_profile_pic(user_id: int, filename: str) -> None:
             """,
             (filename, user_id),
         )
+
+def update_last_seen(user_id: int) -> None:
+    with db_cursor(commit=True) as cursor:
+        cursor.execute(
+            """
+            UPDATE matrixmatch."user"
+            SET last_seen = NOW()
+            WHERE researcher_id = %s
+            """,
+            (user_id,),
+        )
+
+def get_online_users(minutes: int = 5):
+    with db_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT researcher_id, first_name, last_name, role, profile_pic, last_seen
+            FROM matrixmatch."user"
+            WHERE last_seen >= NOW() - INTERVAL '%s minutes'
+            ORDER BY last_seen DESC
+            """,
+            (minutes,),
+        )
+        return cursor.fetchall()

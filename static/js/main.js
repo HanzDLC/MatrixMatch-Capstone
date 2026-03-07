@@ -402,4 +402,39 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // --- Online Users Polling ---
+    const onlineUsersList = document.getElementById("onlineUsersList");
+    if (onlineUsersList) {
+        const fetchOnlineUsers = () => {
+            fetch("/api/online_users")
+                .then(res => res.json())
+                .then(data => {
+                    const users = data.online_users || [];
+                    if (users.length === 0) {
+                        onlineUsersList.innerHTML = '<li style="font-size: 0.8rem; color: var(--text-soft); padding: 0 8px;">No one is online.</li>';
+                        return;
+                    }
+                    onlineUsersList.innerHTML = users.map(user => {
+                        const avatarContent = user.profile_pic
+                            ? `<img src="/static/img/uploads/profiles/${user.profile_pic}?v=1" alt="${user.name}">`
+                            : user.initials;
+
+                        return `
+                            <li class="online-user-item">
+                                <div class="online-user-avatar">
+                                    ${avatarContent}
+                                    <div class="online-user-dot"></div>
+                                </div>
+                                <div class="online-user-name">${user.name}</div>
+                            </li>
+                        `;
+                    }).join('');
+                })
+                .catch(err => console.error("Could not fetch online users:", err));
+        };
+
+        // Fetch immediately, then poll every 30 seconds
+        fetchOnlineUsers();
+        setInterval(fetchOnlineUsers, 30000);
+    }
 });

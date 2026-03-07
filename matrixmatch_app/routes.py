@@ -44,6 +44,15 @@ def _build_history_detail_extras(matcher_module, history_entry, matches):
 
 
 def register_routes(app):
+    @app.before_request
+    def update_last_seen():
+        # Only update for authenticated, non-guest users
+        if "user_id" in session and not session.get("is_guest"):
+            try:
+                users_repo.update_last_seen(session["user_id"])
+            except Exception as e:
+                logger.error(f"Failed to update last_seen for user {session['user_id']}: {e}")
+
     @app.route("/")
     def home():
         return render_template("index.html")
@@ -730,3 +739,21 @@ def register_routes(app):
             "latest_log_id": latest_id,
             "recent_documents": recent_updates
         }, 200
+
+    @app.route("/api/online_users", methods=["GET"])
+    @login_required
+    def api_online_users():
+        # Return users active in the last 5 minutes
+        online = users_repo.get_online_users(minutes=5)
+        # Format for JSON response
+        result = []
+        for user in online:
+            result.append({
+                "id": user["researcher_id"],
+                "name": f"{user['first_name']} {user['last_name']}",
+                "role": user["role"],
+                "profile_pic": user.get("profile_pic"),
+                # Include initials for frontend fallback computation
+                "initials": f"{(user['first_name'] or 'U')[:1]}{(user['last_name'] or '')[:1]}"
+            })
+        return {"online_users": result}, 200
