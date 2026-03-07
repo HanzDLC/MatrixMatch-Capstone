@@ -580,22 +580,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // --- Floating Chat Heads Logic ---
 window.activeChatIntervals = {};
+const MAX_OPEN_CHAT_HEADS = 3;
+
+const touchChatHead = (userId) => {
+    window.chatHeadUsageOrder = (window.chatHeadUsageOrder || []).filter(id => id !== userId);
+    window.chatHeadUsageOrder.push(userId);
+};
+
+const closeChatHead = (userId) => {
+    const chatBox = document.getElementById(`chat-head-${userId}`);
+
+    if (window.activeChatIntervals[userId]) {
+        clearInterval(window.activeChatIntervals[userId]);
+        delete window.activeChatIntervals[userId];
+    }
+
+    window.chatHeadUsageOrder = (window.chatHeadUsageOrder || []).filter(id => id !== userId);
+
+    if (chatBox) {
+        chatBox.remove();
+    }
+};
 
 window.openChatHead = function (userId, userName, profilePic, initials) {
     const container = document.getElementById("chat-heads-container");
     if (!container) return;
 
+    const chatUserId = Number(userId);
+
     // Check if already open
-    const existingChat = document.getElementById(`chat-head-${userId}`);
+    const existingChat = document.getElementById(`chat-head-${chatUserId}`);
     if (existingChat) {
+        touchChatHead(chatUserId);
+
         // Just focus the input
-        const inputField = existingChat.querySelector(`#chat-input-${userId}`);
+        const inputField = existingChat.querySelector(`#chat-input-${chatUserId}`);
         if (inputField) inputField.focus();
 
         // Visual cue (brief shake or highlight)
         existingChat.style.transform = "scale(1.02)";
         setTimeout(() => existingChat.style.transform = "scale(1)", 200);
         return;
+    }
+
+    const openChats = container.querySelectorAll(".chat-head-box");
+    if (openChats.length >= MAX_OPEN_CHAT_HEADS) {
+        const oldestChatUserId = window.chatHeadUsageOrder?.[0]
+            ?? Number(openChats[0]?.id.replace("chat-head-", ""));
+
+        if (!Number.isNaN(oldestChatUserId)) {
+            closeChatHead(oldestChatUserId);
+        }
     }
 
     const avatarHtml = profilePic
@@ -605,7 +640,8 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
     // Create the DOM element
     const chatBox = document.createElement("div");
     chatBox.className = "chat-head-box";
-    chatBox.id = `chat-head-${userId}`;
+    chatBox.id = `chat-head-${chatUserId}`;
+    chatBox.dataset.userId = String(chatUserId);
     chatBox.innerHTML = `
         <div class="chat-head-header">
             <div class="chat-head-user">
@@ -617,26 +653,27 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
                 <button class="chat-head-close" aria-label="Close chat" title="Close" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.2rem; line-height: 1; opacity: 0.8; padding: 0;">&times;</button>
             </div>
         </div>
-        <div class="chat-head-content" id="chat-content-${userId}" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
-            <div class="chat-head-messages" id="chat-messages-${userId}">
+        <div class="chat-head-content" id="chat-content-${chatUserId}" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            <div class="chat-head-messages" id="chat-messages-${chatUserId}">
                 <!-- Messages go here -->
                 <div style="text-align:center; padding: 20px; color: var(--text-soft); font-size: 0.8rem;">Loading...</div>
             </div>
             <div class="chat-head-input" style="padding: 8px 10px; display: flex; align-items: center; gap: 6px;">
-                <input type="text" id="chat-input-${userId}" placeholder="Type..." aria-label="Type a message" style="flex: 1; min-width: 0;">
+                <input type="text" id="chat-input-${chatUserId}" placeholder="Type..." aria-label="Type a message" style="flex: 1; min-width: 0;">
                 <button class="chat-head-send-btn" title="Send message" style="background: var(--accent-main); color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">Send</button>
             </div>
         </div>
     `;
 
     container.appendChild(chatBox);
+    touchChatHead(chatUserId);
 
-    const messagesContainer = chatBox.querySelector(`#chat-messages-${userId}`);
-    const contentArea = chatBox.querySelector(`#chat-content-${userId}`);
+    const messagesContainer = chatBox.querySelector(`#chat-messages-${chatUserId}`);
+    const contentArea = chatBox.querySelector(`#chat-content-${chatUserId}`);
     const closeBtn = chatBox.querySelector(".chat-head-close");
     const minimizeBtn = chatBox.querySelector(".chat-head-minimize");
     const sendBtn = chatBox.querySelector(".chat-head-send-btn");
-    const inputField = chatBox.querySelector(`#chat-input-${userId}`);
+    const inputField = chatBox.querySelector(`#chat-input-${chatUserId}`);
     const header = chatBox.querySelector(".chat-head-header");
 
     // Toggle Minimize
@@ -652,10 +689,12 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
 
     minimizeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        touchChatHead(chatUserId);
         toggleMinimize();
     });
 
     header.addEventListener("click", () => {
+        touchChatHead(chatUserId);
         if (contentArea.style.display === "none") {
             toggleMinimize();
         }
@@ -669,7 +708,7 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
 
     // Load conversation history
     const loadMessages = () => {
-        fetch(`/api/messages/conversation/${userId}`)
+        fetch(`/api/messages/conversation/${chatUserId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.error) throw new Error(data.error);
@@ -682,7 +721,7 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
                 }
 
                 messagesContainer.innerHTML = data.messages.map(msg => {
-                    const isSent = msg.sender_id !== userId;
+                    const isSent = msg.sender_id !== chatUserId;
                     const bubbleClass = isSent ? 'sent' : 'received';
                     return `
                         <div class="chat-bubble ${bubbleClass}">${msg.content}</div>
@@ -690,7 +729,7 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
                     `;
                 }).join('');
 
-                if (isScrolledToBottom || !window.activeChatIntervals[userId]) {
+                if (isScrolledToBottom || !window.activeChatIntervals[chatUserId]) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             })
@@ -701,13 +740,11 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
 
     // Initial load and polling
     loadMessages();
-    window.activeChatIntervals[userId] = setInterval(loadMessages, 5000);
+    window.activeChatIntervals[chatUserId] = setInterval(loadMessages, 5000);
 
     // Close Handler
     closeBtn.addEventListener("click", () => {
-        clearInterval(window.activeChatIntervals[userId]);
-        delete window.activeChatIntervals[userId];
-        chatBox.remove();
+        closeChatHead(chatUserId);
     });
 
     // Send Message Handler
@@ -732,12 +769,13 @@ window.openChatHead = function (userId, userName, profilePic, initials) {
         messagesContainer.appendChild(bubble);
         messagesContainer.appendChild(time);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        touchChatHead(chatUserId);
 
         // Transmit API call
         fetch("/api/messages/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ receiver_id: userId, content: tempVal })
+            body: JSON.stringify({ receiver_id: chatUserId, content: tempVal })
         })
             .then(res => res.json())
             .then(data => {
