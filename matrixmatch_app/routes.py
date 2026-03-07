@@ -757,3 +757,85 @@ def register_routes(app):
                 "initials": f"{(user['first_name'] or 'U')[:1]}{(user['last_name'] or '')[:1]}"
             })
         return {"online_users": result}, 200
+
+    @app.route("/messages", methods=["GET"])
+    @login_required
+    def messages_page():
+        # Get list of all users to populate the "Start a conversation" dropdown or side list
+        all_users = users_repo.get_all_users()
+        # Filter out current user from the list
+        other_users = [u for u in all_users if u["researcher_id"] != session["user_id"]]
+        
+        return render_template(
+            "messages.html",
+            other_users=other_users,
+            current_user_id=session["user_id"]
+        )
+
+    @app.route("/api/messages/recent", methods=["GET"])
+    @login_required
+    def api_messages_recent():
+        user_id = session["user_id"]
+        recent = messages_repo.get_recent_conversations(user_id)
+        unread_count = messages_repo.get_unread_count(user_id)
+        
+        # Serialize datetime and normalize data
+        data = []
+        for row in recent:
+            # Fallback initials
+            initials = f"{(row['first_name'] or 'U')[:1]}{(row['last_name'] or '')[:1]}"
+            data.append({
+                "other_user_id": row["other_user_id"],
+                "first_name": row["first_name"],
+                "last_name": row["last_name"],
+                "profile_pic": row["profile_pic"],
+                "initials": initials,
+                "latest_message": row["content"],
+                "timestamp": row["timestamp"].isoformat() if row["timestamp"] else None,
+                "is_read": row["is_read"],
+                "was_sent_by_me": row["sender_id"] == user_id
+            })
+            
+        return {
+            "conversations": data,
+            "unread_count": unread_count
+        }, 200
+
+    @app.route("/api/messages/conversation/<int:other_user_id>", methods=["GET"])
+    @login_required
+    def api_messages_conversation(other_user_id):
+        user_id = session["user_id"]
+        # Mark messages as read upon opening conversation
+        messages_repo.mark_as_read(sender_id=other_user_id, receiver_id=user_id)
+        
+        conversation = messages_repo.get_conversation(user_id, other_user_id)
+        data = []
+        for msg in conversation:
+            data.append({
+                "id": msg["id"],
+                "sender_id": msg["sender_id"],
+                "content": msg["content"],
+                "timestamp": msg["timestamp"].isoformat() if msg["timestamp"] else None
+            })
+        return {"messages": data}, 200
+
+    @app.route("/api/messages/send", methods=["POST"])
+    @login_required
+    def api_messages_send():
+        data = request.get_json()
+        receiver_id = data.get("receiver_id")
+        content = data.get("content", "").strip()
+        
+        if not receiver_id or not content:
+            return {"error": "Receiver and content are required."}, 400
+            
+        try:
+            messages_repo.send_message(
+                sender_id=session["user_id"],
+                receiver_id=int(receiver_id),
+                content=content
+            )
+            return {"success": True}, 200
+        except Exception as e:
+            logger.error(f"Failed to send message: {e}")
+            return {"error": "Internal server error"}, 500
