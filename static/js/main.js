@@ -190,9 +190,8 @@ document.addEventListener("DOMContentLoaded", () => {
     applyResponsiveTableLabels();
 
     // --- Document Alerts Logic ---
-    const notifBtn = document.querySelector(".notif-btn");
-    const notifDot = document.querySelector(".notif-btn__dot");
-    const notifDropdown = document.getElementById("notificationsDropdown");
+    const notifBtn = document.getElementById("notif-btn-toggle");
+    const notifDot = notifBtn ? notifBtn.querySelector(".notif-btn__dot") : null;
     const markAllReadBtn = document.getElementById("markAllReadBtn");
     const notificationsList = document.getElementById("notificationsList");
 
