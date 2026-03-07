@@ -14,7 +14,7 @@
         <div class="profile-avatar-wrapper" id="avatarUploadTrigger">
             <div class="profile-avatar-box">
                 {% if session.get('profile_pic') %}
-                <img src="{{ url_for('static', filename='img/uploads/profiles/' + session.get('profile_pic')) }}"
+                <img src="{{ url_for('static', filename='img/uploads/profiles/' + session.get('profile_pic')) }}?v=1"
                     class="profile-avatar-img" id="profileDisplayAvatar" alt="Profile">
                 {% else %}
                 <div class="profile-avatar-initials" id="profileDisplayInitials">

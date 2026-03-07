@@ -192,11 +192,21 @@ def register_routes(app):
         # Save file uniquely
         import uuid
         filename = f"profile_{session['user_id']}_{uuid.uuid4().hex[:8]}{ext}"
-        upload_path = os.path.join(app.static_folder, "img", "uploads", "profiles", filename)
+        upload_dir = os.path.join(app.static_folder, "img", "uploads", "profiles")
+        upload_path = os.path.join(upload_dir, filename)
         
         # Create directory if not exists (extra safety)
-        os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+        os.makedirs(upload_dir, exist_ok=True)
         
+        # Delete any existing profile pictures for this user to enforce 1 file per user
+        import glob
+        existing_files = glob.glob(os.path.join(upload_dir, f"profile_{session['user_id']}_*"))
+        for ef in existing_files:
+            try:
+                os.remove(ef)
+            except Exception as e:
+                logger.warning(f"Could not delete old profile pic {ef}: {e}")
+                
         file.save(upload_path)
         
         # Update DB
