@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .replace(/'/g, "&#39;");
 
     const createMessageSignature = (messages = []) => messages
-        .map(message => `${message.id}:${message.sender_id}:${message.timestamp || ""}:${message.content || ""}`)
+        .map(message => `${message.id}:${message.sender_id}:${message.timestamp || ""}:${message.content || ""}:${message.is_read || false}`)
         .join("||");
 
     const scrollToBottom = () => {
@@ -62,16 +62,30 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        let lastReadMessageId = null;
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (String(messages[i].sender_id) === String(currentUserId) && messages[i].is_read) {
+                lastReadMessageId = messages[i].id;
+                break;
+            }
+        }
+
         chatBody.innerHTML = messages.map(msg => {
-            const isSentByMe = msg.sender_id === currentUserId;
+            const isSentByMe = String(msg.sender_id) === String(currentUserId);
             const bubbleClass = isSentByMe ? 'sent' : 'received';
             const timeString = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+            let seenHtml = '';
+            if (msg.id === lastReadMessageId) {
+                seenHtml = '<div class="chat-seen" style="text-align: right; font-size: 0.75rem; color: var(--text-muted); margin-top: -4px; margin-bottom: 8px; margin-right: 4px;">Seen</div>';
+            }
 
             return `
                 <div class="chat-bubble ${bubbleClass}">
                     ${escapeHtml(msg.content || "")}
                 </div>
                 <div class="chat-timestamp">${timeString}</div>
+                ${seenHtml}
             `;
         }).join('');
 
@@ -222,4 +236,17 @@ document.addEventListener("DOMContentLoaded", () => {
             sendMessage();
         }
     });
+
+    const markAsRead = () => {
+        if (activeUserId) {
+            fetch("/api/messages/read", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sender_id: activeUserId })
+            }).catch(console.error);
+        }
+    };
+
+    messageInput?.addEventListener("focus", markAsRead);
+    messageInput?.addEventListener("input", markAsRead);
 });

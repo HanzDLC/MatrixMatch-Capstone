@@ -821,7 +821,8 @@ def register_routes(app):
                 "id": msg["id"],
                 "sender_id": msg["sender_id"],
                 "content": msg["content"],
-                "timestamp": msg["timestamp"].isoformat() if msg["timestamp"] else None
+                "timestamp": msg["timestamp"].isoformat() if msg["timestamp"] else None,
+                "is_read": msg["is_read"]
             })
         return {"messages": data}, 200
 
@@ -844,4 +845,20 @@ def register_routes(app):
             return {"success": True}, 200
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
+            return {"error": "Internal server error"}, 500
+
+    @app.route("/api/messages/read", methods=["POST"])
+    @login_required
+    def api_messages_read():
+        data = request.get_json()
+        sender_id = data.get("sender_id")
+        
+        if not sender_id:
+            return {"error": "Sender ID is required."}, 400
+            
+        try:
+            messages_repo.mark_as_read(sender_id=int(sender_id), receiver_id=session["user_id"])
+            return {"success": True}, 200
+        except Exception as e:
+            logger.error(f"Failed to mark messages as read: {e}")
             return {"error": "Internal server error"}, 500
